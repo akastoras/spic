@@ -1,2 +1,10 @@
 build/
 
+*.yy.*
+
+*.tab.*
+
+
+*.o
+*.output
+*.out

@@ -4,12 +4,11 @@
 	#include <stdlib.h>
 	#include <unistd.h>
 	#include <string.h>
-	#include "constants.h"
+	#include "../include/constants.h"
 
-	#include "parser.tab.h"
+	#include "parser.h"
 
 	#define IS_EOF(token) (token==T_EOF)
-	#define GET_ELEMENT_NAME(x) atoi(x+1)
 
 	// Colors
 	#define RED     "\033[31m"      /* Red */
@@ -33,16 +32,16 @@ ALNUM		[0-9a-z]
 /* Here put all regexes */
 
 /* Q: Can the name of an element be anything other than a number???? */
-NAME		{NUM}+
+NAME		[{ALNUM}]+
 
 
 /*------------ RULES SECTION ------------*/
 %%
+
 <COMMENT>{
 \n		{ BEGIN(INITIAL); }
 [^\n]+
 }
-
 
 <INITIAL>{
 "*"		{ BEGIN(COMMENT); }
@@ -50,24 +49,21 @@ NAME		{NUM}+
 <<EOF>>			{ return print_token(T_EOF); }
 {WHITECHAR}		{  /* Ignore white spaces */ }
 
-"V"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_V); }
-"I"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_I); }
-"R"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_R); }
-"C"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_C); }
-"L"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_L); }
-"D"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_D); }
-"M"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_M); }
-"Q"{NAME}			{ yylval.intval = GET_ELEMENT_NAME(yytext); return print_token(T_Q); }
+"V"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_V); }
+"I"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_I); }
+"R"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_R); }
+"C"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_C); }
+"L"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_L); }
+"D"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_D); }
+"M"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_M); }
+"Q"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_Q); }
 
-{INTEGER}			{ yyval.intval = atoi(yytext); return print_token(T_INTEGER); }
-
-{FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
+ /* {INTEGER}			{ yyval.intval = atoi(yytext); return print_token(T_INTEGER); } */
+ /* { FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); } */
 
 "="					{ return print_token(T_EQUAL); }
 
-{MODEL_NAME}
-
-.				{ yyerror("Unknown Character");}
+.					{ yyerror("Unknown Character"); }
 }
 
 
@@ -124,26 +120,4 @@ int print_token(int token)
 #endif
 
 	return token;
-}
-
-
-int main(int argc, char **argv)
-{
-	int token;
-
-	if (argc > 1) {
-		yyin = fopen(argv[1], "r");
-		if (yyin == NULL) {
-			perror("Error opening file");
-			return -1;
-		}
-	}
-	
-	printf("Start of lexer\n");
-	do {
-		token = yylex();
-	} while (token != 0);
-
-	fclose(yyin);
-	yyterminate();
 }

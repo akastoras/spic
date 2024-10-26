@@ -6,7 +6,7 @@
 	#include <errno.h>
 	#include <stdbool.h>
 	
-	#include "parser.tab.h"
+	#include "parser.h"
 
 	extern FILE *yyin;
 	extern int yylex();
@@ -17,6 +17,8 @@
 
 %union	{
 	int		intval;
+	float	floatval;
+	char	*strval;
 }
 
 //  optional required  optional  optional
@@ -31,6 +33,8 @@
 %token	T_M	"MOS Transistor"
 %token	T_Q	"BJT Transistor"
 
+%token T_EQUAL "="
+
 %token T_INTEGER	"Integer Number"
 %token T_FLOAT		"Floating Point Number"
 %token	T_LINEBREAK	"Line Break"
@@ -43,10 +47,10 @@ netlist: netlist element T_LINEBREAK
 	| element T_LINEBREAK
 	;
 
-element: v | i | r | c | l | d | m | q
+element: T_LINEBREAK
 	;
 
-v: T_V T_NUMBER
+/* v: T_V T_NUMBER
 
 i: T_I T_NUMBER
 
@@ -60,7 +64,7 @@ d: T_D T_NUMBER
 
 m: T_M T_NUMBER
 
-q: T_Q T_NUMBER
+q: T_Q T_NUMBER */
 
 
 %%
