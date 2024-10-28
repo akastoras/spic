@@ -1,3 +1,7 @@
+%code requires {
+	#include <string>
+}
+
 %{
 	#include <stdio.h>
 	#include <stdlib.h>
@@ -18,7 +22,7 @@
 %union	{
 	int		intval;
 	float	floatval;
-	char	*strval;
+	std::string	*strval;
 }
 
 //  optional required  optional  optional
@@ -33,10 +37,12 @@
 %token	T_M	"MOS Transistor"
 %token	T_Q	"BJT Transistor"
 
-%token T_EQUAL "="
+%token	T_EQUAL "="
 
-%token T_INTEGER	"Integer Number"
-%token T_FLOAT		"Floating Point Number"
+%token	T_INTEGER	"Integer Number"
+%token	T_FLOAT		"Floating Point Number"
+%token	T_NAME 		"String Name"
+
 %token	T_LINEBREAK	"Line Break"
 %token	T_EOF	0	"EOF"
 

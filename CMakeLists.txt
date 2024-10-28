@@ -3,6 +3,8 @@ project(spic LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
+include_directories(include)
+
 set(SRC_DIR "src")
 set(BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 

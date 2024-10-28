@@ -1,20 +1,20 @@
 /*------------ DECLARATION SECTION ------------*/
 %{
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <unistd.h>
-	#include <string.h>
-	#include "../include/constants.h"
+	#include <cstdlib>
+	#include <iostream>
+	#include <string>
+	#include <cmath>
+
+	#include "constants.h"
 
 	#include "parser.h"
-
-	#define IS_EOF(token) (token==T_EOF)
 
 	// Colors
 	#define RED     "\033[31m"      /* Red */
 	#define RESET   "\033[0m"
 
 	int print_token(int token);
+	float parse_value_with_exponent(const char *text);
 %}
 
 %option case-insensitive
@@ -28,11 +28,13 @@ WHITECHAR	[ \t\v\n]
 
 ALPHA		[a-z]
 NUM			[0-9]
-ALNUM		[0-9a-z]
-/* Here put all regexes */
+ALNUM		{ALPHA}|{NUM}
 
-/* Q: Can the name of an element be anything other than a number???? */
-NAME		[{ALNUM}]+
+NAME		({ALNUM}|_)+
+
+INTEGER		{NUM}+
+FLOAT1		{NUM}+"."{NUM}+
+FLOAT2 		{NUM}+("."{NUM}+)?(E[+-]?{NUM}+)?
 
 
 /*------------ RULES SECTION ------------*/
@@ -49,21 +51,24 @@ NAME		[{ALNUM}]+
 <<EOF>>			{ return print_token(T_EOF); }
 {WHITECHAR}		{  /* Ignore white spaces */ }
 
-"V"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_V); }
-"I"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_I); }
-"R"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_R); }
-"C"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_C); }
-"L"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_L); }
-"D"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_D); }
-"M"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_M); }
-"Q"{NAME}			{ yylval.strval = (char*)malloc(strlen(yytext)); return print_token(T_Q); }
+"V"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_V); }
+"I"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_I); }
+"R"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_R); }
+"C"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_C); }
+"L"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_L); }
+"D"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_D); }
+"M"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_M); }
+"Q"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_Q); }
 
- /* {INTEGER}			{ yyval.intval = atoi(yytext); return print_token(T_INTEGER); } */
- /* { FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); } */
+{INTEGER}			{ yylval.intval = std::atoi(yytext); return print_token(T_INTEGER); }
+{FLOAT1}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
+{FLOAT2}				{ yylval.floatval = parse_value_with_exponent(yytext); return print_token(T_FLOAT); }
+
+{NAME}				{ yylval.strval = new std::string(yytext); return print_token(T_NAME); }
 
 "="					{ return print_token(T_EQUAL); }
 
-.					{ yyerror("Unknown Character"); }
+.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
 
@@ -75,10 +80,10 @@ void yyerror(const char *s)
 	static int errors = 0;
 	errors++;
 
-	printf(RED "ERROR: " RESET "%s in line %d\n", s, yylineno);
+	std::cout << RED "ERROR: " RESET << s << " in line " << yylineno << "\n";
 
 	if (errors > 5) {
-		printf("%d errors encountered. Compilation not possible...\n", errors);
+		std::cout << errors << " errors encountered. Compilation not possible...\n";
 		exit(1);
 	}
 }
@@ -88,31 +93,32 @@ void yyerror(const char *s)
 int print_token(int token)
 {
 #ifdef VERBOSE_LEXER 
-	printf("Printing a token\n");
-	if (IS_EOF(token)) {
-		printf("Found EOF\n");
+	if (token == T_EOF) {
+		std::cout << "Found EOF\n";
 	} else if (token == T_V) {
-		printf("Found Voltage Source %d\n", yylval.intval);
+		std::cout << "Found Voltage Source " << *yylval.strval << "\n";
 	} else if (token == T_I) {
-		printf("Found Current Source %d\n", yylval.intval);
+		std::cout << "Found Current Source " << *yylval.strval << "\n";
 	} else if (token == T_R) {
-		printf("Found Resistor %d\n", yylval.intval);
+		std::cout << "Found Resistor " << *yylval.strval << "\n";
 	} else if (token == T_C) {
-		printf("Found Capacitor %d\n", yylval.intval);
+		std::cout << "Found Capacitor " << *yylval.strval << "\n";
 	} else if (token == T_L) {
-		printf("Found Load %d\n", yylval.intval);
+		std::cout << "Found Load " << *yylval.strval << "\n";
 	} else if (token == T_D) {
-		printf("Found Diod %d\n", yylval.intval);
+		std::cout << "Found Diode " << *yylval.strval << "\n";
 	} else if (token == T_M) {
-		printf("Found MOS Transistor %d\n", yylval.intval);
+		std::cout << "Found MOS Transistor " << *yylval.strval << "\n";
 	} else if (token == T_Q) {
-		printf("Found BJT Transistor %d\n", yylval.intval);
+		std::cout << "Found BJT Transistor " << *yylval.strval << "\n";
 	} else if (token == T_INTEGER) {
-		printf("Found Integer Number %d\n", yylval.intval);
+		std::cout << "Found Integer " << yylval.intval << "\n";
 	} else if (token == T_FLOAT) {
-		printf("Found Floating Point Number %f\n", yylval.floatval);
+		std::cout << "Found Float " << yylval.floatval << "\n";
+	} else if (token == T_LINEBREAK) {
+		std::cout << "Found Line Break\n";
 	} else if (token == T_EQUAL) {
-		printf("Found Equal\n");
+		std::cout << "Found Equal\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);
@@ -120,4 +126,24 @@ int print_token(int token)
 #endif
 
 	return token;
+}
+
+float parse_value_with_exponent(const char *text)
+{
+	float result, value, exp;
+	char *ptr;
+	char buffer[strlen(text)];
+	strcpy(buffer, text);
+
+	// Find the exponent
+	for (ptr = buffer; *ptr != 'E' && *ptr != 'e'; ptr++);
+	
+	// Break the string
+	*ptr = '\0';
+
+	value = atof(buffer);
+	exp = atof(ptr+1);
+	result = value * pow(10, exp);
+
+	return result;
 }
