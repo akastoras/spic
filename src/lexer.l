@@ -22,9 +22,9 @@
 %option noyywrap
 
 /* Declare Start Conditions */
-%x COMMENT
+%x COMMENT ELEMENT_PARAMS
 
-WHITECHAR	[ \t\v\n]
+WHITECHAR	[ \v\n]
 
 ALPHA		[a-z]
 NUM			[0-9]
@@ -34,8 +34,8 @@ NAME		({ALNUM}|_)+
 
 INTEGER		{NUM}+
 FLOAT1		{NUM}+"."{NUM}+
-FLOAT2 		{NUM}+("."{NUM}+)?(E[+-]?{NUM}+)?
-
+FLOAT2 		{NUM}+("."{NUM}+)?(E[+-]?{NUM}+)
+FLOAT		{FLOAT1}|{FLOAT2}
 
 /*------------ RULES SECTION ------------*/
 %%
@@ -45,28 +45,33 @@ FLOAT2 		{NUM}+("."{NUM}+)?(E[+-]?{NUM}+)?
 [^\n]+
 }
 
+<ELEMENT_PARAMS>{
+\n		{ BEGIN(INITIAL); }
+
+{WHITECHAR}			{ /* Ignore white spaces */ }
+
+{INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
+{FLOAT}			{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
+{NAME}				{ yylval.strval = new std::string(yytext); return print_token(T_NAME); }
+
+"="					{ return print_token(T_EQUAL); }
+}
+
+
 <INITIAL>{
 "*"		{ BEGIN(COMMENT); }
 
 <<EOF>>			{ return print_token(T_EOF); }
 {WHITECHAR}		{  /* Ignore white spaces */ }
 
-"V"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_V); }
-"I"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_I); }
-"R"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_R); }
-"C"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_C); }
-"L"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_L); }
-"D"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_D); }
-"M"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_M); }
-"Q"{NAME}			{ yylval.strval = new std::string(yytext+1); return print_token(T_Q); }
-
-{INTEGER}			{ yylval.intval = std::atoi(yytext); return print_token(T_INTEGER); }
-{FLOAT1}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
-{FLOAT2}				{ yylval.floatval = parse_value_with_exponent(yytext); return print_token(T_FLOAT); }
-
-{NAME}				{ yylval.strval = new std::string(yytext); return print_token(T_NAME); }
-
-"="					{ return print_token(T_EQUAL); }
+"V"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_V); }
+"I"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_I); }
+"R"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_R); }
+"C"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_C); }
+"L"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_L); }
+"D"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_D); }
+"M"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_M); }
+"Q"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_Q); }
 
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
@@ -126,24 +131,4 @@ int print_token(int token)
 #endif
 
 	return token;
-}
-
-float parse_value_with_exponent(const char *text)
-{
-	float result, value, exp;
-	char *ptr;
-	char buffer[strlen(text)];
-	strcpy(buffer, text);
-
-	// Find the exponent
-	for (ptr = buffer; *ptr != 'E' && *ptr != 'e'; ptr++);
-	
-	// Break the string
-	*ptr = '\0';
-
-	value = atof(buffer);
-	exp = atof(ptr+1);
-	result = value * pow(10, exp);
-
-	return result;
 }
