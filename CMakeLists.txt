@@ -18,5 +18,8 @@ flex_target(LEXER "${SRC_DIR}/lexer.l" "${LEXER_OUT}" DEFINES_FILE "${BUILD_DIR}
 bison_target(PARSER "${SRC_DIR}/parser.y" "${PARSER_OUT}" DEFINES_FILE "${BUILD_DIR}/parser.h")
 add_flex_bison_dependency(LEXER PARSER)
 
-add_executable(spic "${SRC_DIR}/main.cpp" "${LEXER_OUT}" "${PARSER_OUT}")
+# Collect all .cpp files in the src directory
+file(GLOB SRC_FILES "${SRC_DIR}/*.cpp")
+
+add_executable(spic ${SRC_FILES} "${LEXER_OUT}" "${PARSER_OUT}")
 target_include_directories(spic PRIVATE "${BUILD_DIR}")

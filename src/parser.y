@@ -1,5 +1,7 @@
 %code requires {
 	#include <string>
+	#include "node_table.h"
+	#include "element_lists.h"
 }
 
 %{
@@ -9,7 +11,7 @@
 	#include <string.h>
 	#include <errno.h>
 	#include <stdbool.h>
-	
+
 	#include "parser.h"
 
 	extern FILE *yyin;
@@ -20,9 +22,12 @@
 %define parse.error verbose
 
 %union	{
-	int		intval;
-	float	floatval;
-	std::string	*strval;
+	int				intval;
+	float			floatval;
+	std::string		*strval;
+	spic::Netlist	*netlist;
+	spic::Element	*element;
+	spic::VoltageSource	*voltage_source;
 }
 
 //  optional required  optional  optional
@@ -39,26 +44,34 @@
 
 %token	T_EQUAL "="
 
-%token	T_INTEGER	"Integer Number"
-%token	T_FLOAT		"Floating Point Number"
-%token	T_NAME 		"String Name"
+%token	<intval>	T_INTEGER	"Integer Number"
+%token	<floatval>	T_FLOAT		"Floating Point Number"
+%token	<strval>	T_NAME 		"String Name"
 
-%token	T_LINEBREAK	"Line Break"
 %token	T_EOF	0	"EOF"
+
+%type <floatval> value
+%type <intval> node
+%type <netlist> netlist
+%type <voltage_source> v
+%type <element> element
 
 %%
 
 // Rules
-netlist: netlist element T_LINEBREAK
-	| element T_LINEBREAK
+netlist: netlist element { $$ = spic::Netlist(); }
+	| element { $$ = spic::Netlist(); }
 	;
 
-element: T_LINEBREAK
+element: v { $$.v = $1 }
 	;
 
-/* v: T_V T_NUMBER
 
-i: T_I T_NUMBER
+v: T_V node node value {}
+	;
+
+
+/* i: T_I T_NUMBER
 
 r: T_R T_NUMBER
 
@@ -72,6 +85,13 @@ m: T_M T_NUMBER
 
 q: T_Q T_NUMBER */
 
+node: T_INTEGER { $$.intval = NodeTable.append_node($1.intval); }
+	| T_NAME { $$.intval = NodeTable.append_node($1.strval); }
+	;
+
+value: T_FLOAT
+	| T_INTEGER { $$ = (float) $1 }
+	;
 
 %%
 /* 

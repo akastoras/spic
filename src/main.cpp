@@ -1,26 +1,37 @@
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <unordered_map>
 
-#include "parser.h"
-#include "lexer.h"
+// #include "parser.h"
+// #include "lexer.h"
+
+#include "node_table.h"
+
+
 
 int main(int argc, char **argv)
 {
-	int token;
+	spic::NodeTable nt = spic::NodeTable();
+	std::string s = std::string("n1");
 
-	if (argc > 1) {
-		yyin = fopen(argv[1], "r");
-		if (yyin == NULL) {
-			perror("Error opening file");
-			return -1;
-		}
-	}
+	nt.append_node(s);
 	
-	printf("Start of lexer\n");
-	do {
-		token = yylex();
-	} while (token != 0);
+	std::cout << nt;
 
-	fclose(yyin);
+// 	int token;
+
+// 	if (argc > 1) {
+// 		yyin = fopen(argv[1], "r");
+// 		if (yyin == NULL) {
+// 			perror("Error opening file");
+// 			return -1;
+// 		}
+// 	}
+	
+// 	printf("Start of lexer\n");
+// 	do {
+// 		token = yylex();
+// 	} while (token != 0);
+
+// 	fclose(yyin);
 	// yyterminate();
 }

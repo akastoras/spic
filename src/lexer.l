@@ -73,6 +73,8 @@ FLOAT		{FLOAT1}|{FLOAT2}
 "M"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_M); }
 "Q"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_Q); }
 
+"+"					{ BEGIN(ELEMENT_PARAMS); }
+
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
@@ -120,8 +122,6 @@ int print_token(int token)
 		std::cout << "Found Integer " << yylval.intval << "\n";
 	} else if (token == T_FLOAT) {
 		std::cout << "Found Float " << yylval.floatval << "\n";
-	} else if (token == T_LINEBREAK) {
-		std::cout << "Found Line Break\n";
 	} else if (token == T_EQUAL) {
 		std::cout << "Found Equal\n";
 	} else {
