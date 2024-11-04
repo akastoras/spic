@@ -17,17 +17,9 @@ namespace spic {
 			table["0"] = 0;
 		}
 
-		node_id_t append_node(std::string &name) {
-			node_id_t nid = table.size();
-			table[name] = nid;
-			return nid;
-		}
-
-		node_id_t append_node(int name) {
-			node_id_t nid = table.size();
-			table[std::to_string(name)] = nid;
-			return nid;
-		}
+		node_id_t append_node(std::string *name);
+		node_id_t append_node(int name);
+		std::string get_node_name(int node_id);
 	};
 }
 

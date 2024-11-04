@@ -54,7 +54,8 @@ FLOAT		{FLOAT1}|{FLOAT2}
 {FLOAT}			{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 {NAME}				{ yylval.strval = new std::string(yytext); return print_token(T_NAME); }
 
-"="					{ return print_token(T_EQUAL); }
+"L="				{ return print_token(T_LENGTH); }
+"W="				{ return print_token(T_WIDTH); }
 }
 
 

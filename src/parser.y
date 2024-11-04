@@ -1,7 +1,7 @@
 %code requires {
 	#include <string>
 	#include "node_table.h"
-	#include "element_lists.h"
+	#include "netlist.h"
 }
 
 %{
@@ -17,6 +17,9 @@
 	extern FILE *yyin;
 	extern int yylex();
 	extern void yyerror(const char *err);
+	void spic_parser_init();
+
+	spic::NodeTable *node_table;
 %}
 
 %define parse.error verbose
@@ -26,23 +29,23 @@
 	float			floatval;
 	std::string		*strval;
 	spic::Netlist	*netlist;
-	spic::Element	*element;
 	spic::VoltageSource	*voltage_source;
 }
 
 //  optional required  optional  optional
 // %token    <type>    <name>    <number>  "description"
 
-%token	T_V	"Voltage Source"
-%token	T_I	"Current Source"
-%token	T_R	"Resistor"
-%token	T_C	"Capacitor"
-%token	T_L	"Load"
-%token	T_D	"Diod"
-%token	T_M	"MOS Transistor"
-%token	T_Q	"BJT Transistor"
+%token	<strval> T_V	"Voltage Source"
+%token	<strval> T_I	"Current Source"
+%token	<strval> T_R	"Resistor"
+%token	<strval> T_C	"Capacitor"
+%token	<strval> T_L	"Load"
+%token	<strval> T_D	"Diod"
+%token	<strval> T_M	"MOS Transistor"
+%token	<strval> T_Q	"BJT Transistor"
 
-%token	T_EQUAL "="
+%token	<floatval> T_LENGTH "MOS Length"
+%token	<floatval> T_WIDTH "MOS Width"
 
 %token	<intval>	T_INTEGER	"Integer Number"
 %token	<floatval>	T_FLOAT		"Floating Point Number"
@@ -52,22 +55,20 @@
 
 %type <floatval> value
 %type <intval> node
-%type <netlist> netlist
+%type <netlist> netlist spicefile
 %type <voltage_source> v
-%type <element> element
 
 %%
 
+spicefile: { spic_parser_init(); } netlist { std::cout << *$2; }
+
 // Rules
-netlist: netlist element { $$ = spic::Netlist(); }
-	| element { $$ = spic::Netlist(); }
-	;
-
-element: v { $$.v = $1 }
+netlist: netlist v { $$ = $1; $$->add_voltage_source($2); }
+	| v { $$ = new spic::Netlist(); $$->add_voltage_source($1); }
 	;
 
 
-v: T_V node node value {}
+v: T_V node node value { $$ = new spic::VoltageSource($1, $2, $3, $4); }
 	;
 
 
@@ -81,38 +82,21 @@ l: T_L T_NUMBER
 
 d: T_D T_NUMBER
 
-m: T_M T_NUMBER
+m: T_M node node node node T_NAME T_LENGTH value T_WIDTH value
 
 q: T_Q T_NUMBER */
 
-node: T_INTEGER { $$.intval = NodeTable.append_node($1.intval); }
-	| T_NAME { $$.intval = NodeTable.append_node($1.strval); }
+node: T_INTEGER { $$ = node_table->append_node($1); }
+	| T_NAME { $$ = node_table->append_node($1); }
 	;
 
 value: T_FLOAT
-	| T_INTEGER { $$ = (float) $1 }
+	| T_INTEGER { $$ = (float) $1; }
 	;
 
 %%
-/* 
-int main(int argc, char **argv)
+
+void spic_parser_init()
 {
-	// Get input file.
-	if (argc > 1) {
-		yyin = fopen(argv[1], "r");
-		if (yyin == NULL) {
-			char buff[20];
-			sprintf(buff, "Error opening file %s", argv[1]);
-			perror(buff);
-			return -1;
-		}
-	}
-	
-	// This is where the magic happens
-	yyparse();
-
-	// Free memory & Cleanup
-	fclose(yyin);
-
-	return 0;
-} */
+	node_table = new spic::NodeTable();
+}
