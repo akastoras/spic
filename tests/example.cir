@@ -1,11 +1,10 @@
 * Given example
 
-* Voltage Sources
 V1 5 0 1.3e-2
 V_source2 3 0 0.2
 Vsource_1 7 6 2
 
-D1 9 20 diode_model 0.1
+D1 9 20 diode_model area=0.1
 M_mos 10 11 21 13 mosfet L=1e-3 W=0.0035
 Qbjt 14 16 31 bjt_model
 * Current Sources

@@ -16,6 +16,7 @@ namespace spic {
 			// table = std::unordered_map<std::string&, node_id_t>();
 			table["0"] = 0;
 		}
+
 		node_id_t find_node(int name);
 		node_id_t find_node(std::string *name);
 		node_id_t append_node(std::string *name);

@@ -5,14 +5,13 @@
 	#include <string>
 	#include <cmath>
 
-	#include "constants.h"
-
 	#include "parser.h"
 
 	// Colors
 	#define RED     "\033[31m"      /* Red */
 	#define RESET   "\033[0m"
 
+	void yyerror(const char *s);
 	int print_token(int token);
 	float parse_value_with_exponent(const char *text);
 %}
@@ -22,9 +21,9 @@
 %option noyywrap
 
 /* Declare Start Conditions */
-%x COMMENT ELEMENT_PARAMS
+%x COMMENT ELEMENT_PARAMS END
 
-WHITECHAR	[ \v\n]
+WHITECHAR	[ \r\v\n]
 
 ALPHA		[a-z]
 NUM			[0-9]
@@ -56,14 +55,22 @@ FLOAT		{FLOAT1}|{FLOAT2}
 
 "L="				{ return print_token(T_LENGTH); }
 "W="				{ return print_token(T_WIDTH); }
+"area="				{ return print_token(T_AREA);}
 }
 
+<END>{
+{WHITECHAR}			{ /* Ignore white spaces */ }
+<<EOF>>				{ return print_token(T_EOF); }
+
+.					{ yyerror("Unexpected character after .END"); }
+}
 
 <INITIAL>{
-"*"		{ BEGIN(COMMENT); }
+"*"					{ BEGIN(COMMENT); }
 
-<<EOF>>			{ return print_token(T_EOF); }
-{WHITECHAR}		{  /* Ignore white spaces */ }
+".END"				{ BEGIN(END); }
+<<EOF>>				{ return print_token(T_EOF); }
+{WHITECHAR}			{ /* Ignore white spaces */ }
 
 "V"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_V); }
 "I"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_I); }
@@ -100,7 +107,7 @@ void yyerror(const char *s)
 /* All messages are printed by defining VERBOSE_LEXER in constants.h */
 int print_token(int token)
 {
-#ifdef VERBOSE_LEXER 
+#if VERBOSE_LEXER == 1
 	if (token == T_EOF) {
 		std::cout << "Found EOF\n";
 	} else if (token == T_V) {
@@ -112,7 +119,7 @@ int print_token(int token)
 	} else if (token == T_C) {
 		std::cout << "Found Capacitor " << *yylval.strval << "\n";
 	} else if (token == T_L) {
-		std::cout << "Found Load " << *yylval.strval << "\n";
+		std::cout << "Found Inductor " << *yylval.strval << "\n";
 	} else if (token == T_D) {
 		std::cout << "Found Diode " << *yylval.strval << "\n";
 	} else if (token == T_M) {
@@ -127,6 +134,8 @@ int print_token(int token)
 		std::cout << "Found MOS Length\n";
 	} else if (token == T_WIDTH) {
 		std::cout << "Found MOS Width\n";
+	} else if (token == T_AREA) {
+		std::cout << "Found Area Factor of BJT/Diode\n";
 	} else if (token == T_NAME) {
 		std::cout << "Found Name " << *yylval.strval << "\n";
 	} else {

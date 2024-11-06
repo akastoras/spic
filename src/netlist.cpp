@@ -22,8 +22,8 @@ namespace spic {
 		capacitors.push_back(c);
 	}
 
-	void Netlist::add_load(Load *l) {
-		loads.push_back(l);
+	void Netlist::add_inductor(Inductor *l) {
+		inductors.push_back(l);
 	}
 
 	void Netlist::add_diode(Diode *d) {
@@ -41,6 +41,7 @@ namespace spic {
 
 /* Support of << operator for printing a NodeTable */
 std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
+#if VERBOSE_NETLIST == 2
 	for (auto it = nl.voltage_sources.begin(); it != nl.voltage_sources.end(); ++it) {
 		out << **it << std::endl;
 	}
@@ -57,7 +58,7 @@ std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
 		out << **it << std::endl;
 	}
 
-	for (auto it = nl.loads.begin(); it != nl.loads.end(); ++it) {
+	for (auto it = nl.inductors.begin(); it != nl.inductors.end(); ++it) {
 		out << **it << std::endl;
 	}
 
@@ -72,7 +73,18 @@ std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
 	for (auto it = nl.bj_transistors.begin(); it != nl.bj_transistors.end(); ++it) {
 		out << **it << std::endl;
 	}
-
+#endif
+#if VERBOSE_NETLIST >= 1
+	out << "Netlist consists of:" << std::endl;
+	out << "\t" <<  nl.voltage_sources.size() << " voltage sources" << std::endl;
+	out << "\t" <<  nl.current_sources.size() << " current sources" << std::endl;
+	out << "\t" <<  nl.resistors.size() << " resistors" << std::endl;
+	out << "\t" <<  nl.capacitors.size() << " capacitors" << std::endl;
+	out << "\t" <<  nl.inductors.size() << " inductors" << std::endl;
+	out << "\t" <<  nl.diodes.size() << " diode" << std::endl;
+	out << "\t" <<  nl.mos_transistors.size() << " mosfet transistors" << std::endl;
+	out << "\t" <<  nl.bj_transistors.size() << " bipolar junction transistors" << std::endl;
+#endif
 	return out;
 }
 
@@ -111,9 +123,9 @@ std::ostream& operator<<(std::ostream &out, spic::Capacitor &c) {
 	return out;
 }
 
-/* Support of << operator for printing a Load object*/
-std::ostream& operator<<(std::ostream &out, spic::Load &l) {
-	out << "Load:\n\tName: \'" << *l.name << "\'" << std::endl;
+/* Support of << operator for printing a Inductor object*/
+std::ostream& operator<<(std::ostream &out, spic::Inductor &l) {
+	out << "Inductor:\n\tName: \'" << *l.name << "\'" << std::endl;
 	out << "\t+ Node: " << l.node_positive << " (" << node_table->get_node_name(l.node_positive) << ")" << std::endl;
 	out << "\t- Node: " << l.node_negative << " (" << node_table->get_node_name(l.node_negative) << ")" << std::endl;
 	out << "\tValue: " << l.value << std::endl;
