@@ -8,3 +8,6 @@ build/
 *.o
 *.output
 *.out
+
+.DS_Store
+.vscode

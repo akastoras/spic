@@ -5,7 +5,7 @@
 
 
 namespace spic {
-	typedef int node_id_t;
+	using node_id_t = int;
 
 	class NodeTable {
 		public:
@@ -16,7 +16,8 @@ namespace spic {
 			// table = std::unordered_map<std::string&, node_id_t>();
 			table["0"] = 0;
 		}
-
+		node_id_t find_node(int name);
+		node_id_t find_node(std::string *name);
 		node_id_t append_node(std::string *name);
 		node_id_t append_node(int name);
 		std::string get_node_name(int node_id);

@@ -8,6 +8,8 @@ include_directories(include)
 set(SRC_DIR "src")
 set(BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
+set(CMAKE_BUILD_TYPE Debug)
+
 find_package(FLEX 2.6 REQUIRED)
 find_package(BISON 3.0 REQUIRED)
 

@@ -4,6 +4,18 @@
 #include "node_table.h"
 
 namespace spic {
+	node_id_t NodeTable::find_node(int name) {
+		std::string str = std::to_string(name);
+		return find_node(&str);
+	}
+
+	node_id_t NodeTable::find_node(std::string *name) {
+		auto it = table.find(*name);
+		if (it != table.end()) {
+			return it->second;
+		}
+		return -1; // Or some other invalid node_id_t value
+	}
 
 	/* Methods of NodeTable */
 	node_id_t NodeTable::append_node(std::string *name) {
@@ -25,6 +37,7 @@ namespace spic {
 			return it.first; 
 		}
 	}
+	std::cout << "Node name not found" << std::endl;
 	return nullptr;
 }
 }
@@ -34,7 +47,7 @@ std::ostream& operator<<(std::ostream &out, spic::NodeTable const& nt) {
 	for (auto it = nt.table.begin(); it != nt.table.end(); ++it) {
 		out << it->first << " -> " << it->second << std::endl;
 	}
-	// and so on... 
+	// and so on...
 	return out;
 }
 

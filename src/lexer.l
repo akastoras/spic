@@ -51,7 +51,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 {WHITECHAR}			{ /* Ignore white spaces */ }
 
 {INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
-{FLOAT}			{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
+{FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 {NAME}				{ yylval.strval = new std::string(yytext); return print_token(T_NAME); }
 
 "L="				{ return print_token(T_LENGTH); }
@@ -123,8 +123,12 @@ int print_token(int token)
 		std::cout << "Found Integer " << yylval.intval << "\n";
 	} else if (token == T_FLOAT) {
 		std::cout << "Found Float " << yylval.floatval << "\n";
-	} else if (token == T_EQUAL) {
-		std::cout << "Found Equal\n";
+	} else if (token == T_LENGTH) {
+		std::cout << "Found MOS Length\n";
+	} else if (token == T_WIDTH) {
+		std::cout << "Found MOS Width\n";
+	} else if (token == T_NAME) {
+		std::cout << "Found Name " << *yylval.strval << "\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

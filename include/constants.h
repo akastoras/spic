@@ -5,7 +5,7 @@
 #define MAX_LIST_DEPTH (5)
 #define NO_TYPES (7)
 // Uncomment this for verbose lectical analysis
-#define VERBOSE_LEXER
+// #define VERBOSE_LEXER
 
 void yyerror(const char *s);
 
