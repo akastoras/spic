@@ -1,5 +1,18 @@
 # spic: A subset of SPICE
 
+## Clone Instructions
+
+1. Clone the repository
+```shell
+git clone https://github.com/akastoras/spic
+cd spic
+```
+
+2. Download essential submodules
+```shell
+git submodule update --init --recursive
+```
+
 ## Build Instructions
 
 To build spic run the following instructions:
