@@ -20,8 +20,7 @@ namespace spic {
 	/* Methods of NodeTable */
 	node_id_t NodeTable::append_node(std::string *name) {
 		node_id_t nid = table.size();
-		table[*name] = nid; // ERROR
-		delete(name);
+		table[*name] = nid;
 		return nid;
 	}
 

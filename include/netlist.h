@@ -1,25 +1,36 @@
 #pragma once
 
 #include <string>
-#include <list>
+#include <vector>
 
 #include "node_table.h"
 
 namespace spic {
-	/* Class to be inherited from by elements with 2 nodes */
-	class Element2nodes {
+	using element_id_t = int;
+
+	class Element {
 		public:
-		std::string *name;
+		std::string name;
+
+		// Define == operator
+		bool operator==(const Element &other) const {
+			return name == other.name;
+		}
+
+		Element(std::string *str) : name(*str) {}
+		~Element() {}
+	};
+
+	/* Class to be inherited from by elements with 2 nodes */
+	class Element2nodes : public Element {
+		public:
 		node_id_t node_positive;
 		node_id_t node_negative;
 		float value;
 
 		/* Voltage Source Constructor */
 		Element2nodes(std::string *str, int node1, int node2, float val):
-			name(str), node_positive(node1), node_negative(node2), value(val) { }
-		~Element2nodes() {
-			delete name;
-		}
+			Element(str), node_positive(node1), node_negative(node2), value(val) { }
 	};
 
 	class VoltageSource : public Element2nodes {
@@ -42,107 +53,77 @@ namespace spic {
 		using Element2nodes::Element2nodes;
 	};
 
-	class Diode {
+	class Diode : public Element {
 		public:
-		std::string *name;
 		node_id_t node_positive;
 		node_id_t node_negative;
-		std::string *model;
+		std::string model;
 		float area_factor;
 
 		/* Diode Constructor */
 		Diode(std::string *str, int node1, int node2, std::string *file, float val):
-			name(str), node_positive(node1), node_negative(node2), model(file), area_factor(val) { }
-		~Diode() {
-			delete name;
-			delete model;
-		}
+			Element(str), node_positive(node1), node_negative(node2), model(*file), area_factor(val) { }
 	};
-	
-	class MOS {
+
+	class MOS : public Element {
 		public:
-		std::string *name;
 		node_id_t drain;
 		node_id_t gate;
 		node_id_t source;
 		node_id_t body;
-		std::string *model;
+		std::string model;
 		float length;
 		float width;
 
 		/* MOS Constructor */
 		MOS(std::string *str, int node1, int node2, int node3, int node4, std::string *file, float val1, float val2):
-			name(str), drain(node1), gate(node2), source(node3), body(node4), model(file), length(val1), width(val2) { }
-		~MOS() {
-			delete name;
-			delete model;
-		}
+			Element(str), drain(node1), gate(node2), source(node3), body(node4), model(*file), length(val1), width(val2) { }
 	};
 
-	class BJT {
+	class BJT : public Element {
 		public:
-		std::string *name;
 		node_id_t collector;
 		node_id_t base;
 		node_id_t emitter;
-		std::string *model;
+		std::string model;
 		float area_factor;
 
 		/* BJT Constructor */
 		BJT(std::string *str, int node1, int node2, int node3, std::string *file, float val):
-			name(str), collector(node1), base(node2), emitter(node3), model(file), area_factor(val) { }
-		~BJT() {
-			delete name;
-			delete model;
-		}
+			Element(str), collector(node1), base(node2), emitter(node3), model(*file), area_factor(val) { }
 	};
 	
+	/* Template class to store elements of netlist */
+	template <class ElementType>
+		class ElementList {
+			public:
+			std::vector<ElementType> elements;
+			std::unordered_map<std::string, element_id_t> name_map;
+			element_id_t find_element_name(std::string &name);
+			element_id_t append_element_name(std::string &name);
+			bool add_element(ElementType *e);
+		};
+
 	/* Netlist class contains a list of pointers to each element type */
 	class Netlist {
 		public:
-		std::list<VoltageSource *> voltage_sources;
-		std::list<CurrentSource *> current_sources;
-		std::list<Resistor *> resistors;
-		std::list<Capacitor *> capacitors;
-		std::list<Inductor *> inductors;
-		std::list<Diode *> diodes;
-		std::list<MOS *> mos_transistors;
-		std::list<BJT *> bj_transistors;
+		spic::ElementList<VoltageSource> voltage_sources;
+		spic::ElementList<CurrentSource> current_sources;
+		spic::ElementList<Resistor>      resistors;
+		spic::ElementList<Capacitor>     capacitors;
+		spic::ElementList<Inductor>      inductors;
+		spic::ElementList<Diode>         diodes;
+		spic::ElementList<MOS>           mos;
+		spic::ElementList<BJT>           bjt;
 
-		Netlist() { }
-		~Netlist() {
-			for (auto it = voltage_sources.begin(); it != voltage_sources.end(); ++it) {
-				delete *it;
-			}
-			for (auto it = current_sources.begin(); it != current_sources.end(); ++it) {
-				delete *it;
-			}
-			for (auto it = resistors.begin(); it != resistors.end(); ++it) {
-				delete *it;
-			}
-			for (auto it = capacitors.begin(); it != capacitors.end(); ++it) {
-				delete *it;
-			}
-			for (auto it = inductors.begin(); it != inductors.end(); ++it) {
-				delete *it;
-			}
-			for (auto it = diodes.begin(); it != diodes.end(); ++it) {
-				delete *it;
-			}
-			for (auto it = mos_transistors.begin(); it != mos_transistors.end(); ++it) {
-				delete *it;
-			}
-		}
-
-		/* Functions to append an element to the relevant list */
-		void add_voltage_source(VoltageSource *v);
-		void add_current_source(CurrentSource *i);
-		void add_resistor(Resistor *r);
-		void add_capacitor(Capacitor *c);
-		void add_inductor(Inductor *l);
-		void add_diode(Diode *d);
-		void add_mos(MOS *m);
-		void add_bjt(BJT *q);
+		bool add_voltage_source(VoltageSource *v);
+		bool add_current_source(CurrentSource *c);
+		bool add_resistor(Resistor *r);
+		bool add_capacitor(Capacitor *c);
+		bool add_inductor(Inductor *i);
+		bool add_diode(Diode *d);
+		bool add_mos(MOS *m);
+		bool add_bjt(BJT *q);
 	};
 }
 

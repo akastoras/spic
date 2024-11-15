@@ -9,6 +9,7 @@
 
 spic::Netlist *netlist;
 spic::NodeTable *node_table;
+extern int error_count;
 
 int main(int argc, char **argv)
 {
@@ -30,6 +31,10 @@ int main(int argc, char **argv)
 
 	// Call the parser
 	yyparse();
+
+	if (error_count > 0) {
+		exit(1);
+	}
 
 	// Print the basic structures
 	std::cout << *node_table;

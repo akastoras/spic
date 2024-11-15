@@ -5,21 +5,16 @@
 }
 
 %{
-	#include <stdio.h>
-	#include <stdlib.h>
-	#include <unistd.h>
-	#include <string.h>
-	#include <errno.h>
-	#include <stdbool.h>
-
 	#include "parser.h"
 
 	extern FILE *yyin;
+	extern int error_count;
 	extern int yylex();
 	extern void yyerror(const char *err);
 	void spic_parser_init();
 	spic::node_id_t find_or_append_node_int(int node);
 	spic::node_id_t find_or_append_node_str(std::string *node);
+	void check_add_element(bool res, const std::string &element_name, const std::string &name);
 
 	extern spic::NodeTable *node_table;
 	extern spic::Netlist *netlist;
@@ -36,7 +31,7 @@
 	spic::CurrentSource *current_source;
 	spic::Resistor 		*resistor;
 	spic::Capacitor 	*capacitor;
-	spic::Inductor 			*Inductor;
+	spic::Inductor 		*Inductor;
 	spic::Diode			*diode;
 	spic::MOS			*mos_transistor;
 	spic::BJT			*bj_transistor;
@@ -83,45 +78,41 @@
 spicefile: netlist { netlist = $1; }
 
 // Netlist can contain multiple elements
-netlist: netlist v { $$ = $1; $$->add_voltage_source($2); }
-		| netlist i { $$ = $1; $$->add_current_source($2); }
-		| netlist r { $$ = $1; $$->add_resistor($2); }
-		| netlist c { $$ = $1; $$->add_capacitor($2); }
-		| netlist l { $$ = $1; $$->add_inductor($2); }
-		| netlist d { $$ = $1; $$->add_diode($2); }
-		| netlist m { $$ = $1; $$->add_mos($2); }
-		| netlist q { $$ = $1; $$->add_bjt($2); }
-		| v { $$ = netlist; $$->add_voltage_source($1); }
-		| i { $$ = netlist; $$->add_current_source($1); }
-		| r { $$ = netlist; $$->add_resistor($1); }
-		| c { $$ = netlist; $$->add_capacitor($1); }
-		| l { $$ = netlist; $$->add_inductor($1); } 
-		| d { $$ = netlist; $$->add_diode($1); }
-		| m { $$ = netlist; $$->add_mos($1); }
-		| q { $$ = netlist; $$->add_bjt($1); }
+netlist:  netlist v { $$ = $1; check_add_element($$->add_voltage_source($2),"Voltage Source",	$2->name); delete $2; }
+		| netlist i { $$ = $1; check_add_element($$->add_current_source($2),"Current Source",	$2->name); delete $2; }
+		| netlist r { $$ = $1; check_add_element($$->add_resistor($2), 		"Resistor",			$2->name); delete $2; }
+		| netlist c { $$ = $1; check_add_element($$->add_capacitor($2), 	"Capacitor",		$2->name); delete $2; }
+		| netlist l { $$ = $1; check_add_element($$->add_inductor($2), 		"Inductor",			$2->name); delete $2; }
+		| netlist d { $$ = $1; check_add_element($$->add_diode($2), 		"Diode",			$2->name); delete $2; }
+		| netlist m { $$ = $1; check_add_element($$->add_mos($2), 			"MOS",				$2->name); delete $2; }
+		| netlist q { $$ = $1; check_add_element($$->add_bjt($2), 			"BJT",				$2->name); delete $2; }
+		| v { $$ = netlist; $$->add_voltage_source($1); delete $1; }
+		| i { $$ = netlist; $$->add_current_source($1); delete $1; }
+		| r { $$ = netlist; $$->add_resistor($1);       delete $1; }
+		| c { $$ = netlist; $$->add_capacitor($1);      delete $1; }
+		| l { $$ = netlist; $$->add_inductor($1);       delete $1; }
+		| d { $$ = netlist; $$->add_diode($1);          delete $1; }
+		| m { $$ = netlist; $$->add_mos($1);            delete $1; }
+		| q { $$ = netlist; $$->add_bjt($1);            delete $1; }
 
 // Specifications for each element
 
-v: T_V node node value { $$ = new spic::VoltageSource($1, $2, $3, $4); }
+v: T_V node node value { $$ = new spic::VoltageSource($1, $2, $3, $4); delete $1; }
+i: T_I node node value { $$ = new spic::CurrentSource($1, $2, $3, $4); delete $1; }
+r: T_R node node value { $$ = new spic::Resistor     ($1, $2, $3, $4); delete $1; }
+c: T_C node node value { $$ = new spic::Capacitor    ($1, $2, $3, $4); delete $1; }
+l: T_L node node value { $$ = new spic::Inductor     ($1, $2, $3, $4); delete $1; }
 
-i: T_I node node value { $$ = new spic::CurrentSource($1, $2, $3, $4); }
+d: T_D node node T_NAME T_AREA value { $$ = new spic::Diode($1, $2, $3, $4, $6);  delete $1; delete $4; }
+ | T_D node node T_NAME              { $$ = new spic::Diode($1, $2, $3, $4, 1.0); delete $1; delete $4; }
 
-r: T_R node node value { $$ = new spic::Resistor($1, $2, $3, $4); }
+m: T_M node node node node T_NAME T_LENGTH value T_WIDTH value { $$ = new spic::MOS($1, $2, $3, $4, $5, $6, $8, $10); delete $1; delete $6; }
 
-c: T_C node node value { $$ = new spic::Capacitor($1, $2, $3, $4); }
-
-l: T_L node node value { $$ = new spic::Inductor($1, $2, $3, $4); }
-
-d: T_D node node T_NAME T_AREA value { $$ = new spic::Diode($1, $2, $3, $4, $6); }
- | T_D node node T_NAME { $$ = new spic::Diode($1, $2, $3, $4, 1.0); }
-
-m: T_M node node node node T_NAME T_LENGTH value T_WIDTH value { $$ = new spic::MOS($1, $2, $3, $4, $5, $6, $8, $10); }
-
-q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $5, $7); }
- | T_Q node node node T_NAME { $$ = new spic::BJT($1, $2, $3, $4, $5, 1.0); }
+q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $5, $7); delete $1; delete $5; }
+ | T_Q node node node T_NAME { $$ = new spic::BJT($1, $2, $3, $4, $5, 1.0);             delete $1; delete $5; }
 
 node: T_INTEGER { $$ = find_or_append_node_int($1); }
-	| T_NAME { $$ = find_or_append_node_str($1); }
+	| T_NAME { $$ = find_or_append_node_str($1); delete $1; }
 
 value: T_FLOAT
 	| T_INTEGER { $$ = (float) $1; }
@@ -144,4 +135,11 @@ spic::node_id_t find_or_append_node_str(std::string *node)
 	if (id < 0)
 		id = node_table->append_node(node);
 	return id;
+}
+
+void check_add_element(bool res, const std::string &element_name, const std::string &name)
+{
+	if (!res) {
+		yyerror(("Duplicate " + element_name + " name: '" + name + "'").c_str());
+	}
 }

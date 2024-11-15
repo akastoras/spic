@@ -4,6 +4,9 @@
 	#include <iostream>
 	#include <string>
 	#include <cmath>
+	#include <cstring>
+	#include <cctype>
+	#include <bits/stdc++.h>
 
 	#include "parser.h"
 
@@ -11,9 +14,14 @@
 	#define RED     "\033[31m"      /* Red */
 	#define RESET   "\033[0m"
 
+	#define TOUPPER(str) std::transform(str->begin(), str->end(), str->begin(),[](unsigned char c) { return std::toupper(c); })
+
+	int error_count = 0;
+
 	void yyerror(const char *s);
 	int print_token(int token);
 	float parse_value_with_exponent(const char *text);
+	void toUpper(std::string* str);
 %}
 
 %option case-insensitive
@@ -51,7 +59,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 
 {INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
-{NAME}				{ yylval.strval = new std::string(yytext); return print_token(T_NAME); }
+{NAME}				{ yylval.strval = new std::string(yytext); TOUPPER(yylval.strval); return print_token(T_NAME); }
 
 "L="				{ return print_token(T_LENGTH); }
 "W="				{ return print_token(T_WIDTH); }
@@ -72,14 +80,14 @@ FLOAT		{FLOAT1}|{FLOAT2}
 <<EOF>>				{ return print_token(T_EOF); }
 {WHITECHAR}			{ /* Ignore white spaces */ }
 
-"V"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_V); }
-"I"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_I); }
-"R"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_R); }
-"C"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_C); }
-"L"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_L); }
-"D"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_D); }
-"M"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_M); }
-"Q"{NAME}			{ yylval.strval = new std::string(yytext+1); BEGIN(ELEMENT_PARAMS); return print_token(T_Q); }
+"V"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_V); }
+"I"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_I); }
+"R"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_R); }
+"C"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_C); }
+"L"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_L); }
+"D"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_D); }
+"M"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_M); }
+"Q"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_Q); }
 
 "+"					{ BEGIN(ELEMENT_PARAMS); }
 
@@ -92,13 +100,12 @@ FLOAT		{FLOAT1}|{FLOAT2}
 
 void yyerror(const char *s)
 {
-	static int errors = 0;
-	errors++;
+	error_count++;
 
 	std::cout << RED "ERROR: " RESET << s << " in line " << yylineno << "\n";
 
-	if (errors > 5) {
-		std::cout << errors << " errors encountered. Compilation not possible...\n";
+	if (error_count > 2) {
+		std::cout << error_count << " errors encountered. Compilation not possible...\n";
 		exit(1);
 	}
 }
