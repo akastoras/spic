@@ -1,11 +1,14 @@
 #include <iostream>
 #include <unordered_map>
 
+#include <Eigen/Core>
+
 #include "parser.h"
 #include "lexer.h"
 
 #include "node_table.h"
 #include "netlist.h"
+#include "mna.h"
 
 spic::Netlist *netlist;
 spic::NodeTable *node_table;
@@ -31,14 +34,18 @@ int main(int argc, char **argv)
 
 	// Call the parser
 	yyparse();
-
+	
 	if (error_count > 0) {
 		exit(1);
 	}
 
+	int no_nodes = node_table->size();
+
+	spic::MNASystemDC system = spic::MNASystemDC(*netlist, no_nodes);
+
 	// Print the basic structures
 	std::cout << *node_table;
-	std::cout << *netlist; 
+	std::cout << *netlist;
 
 	// Free memory & Cleanup
 	delete node_table;

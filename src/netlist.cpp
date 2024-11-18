@@ -7,32 +7,6 @@
 extern spic::NodeTable *node_table;
 
 namespace spic {
-	template <class ElementType>
-	element_id_t ElementList<ElementType>::find_element_name(std::string &name) {
-		auto it = name_map.find(name);
-		if (it != name_map.end()) {
-			return it->second;
-		}
-		return -1; // Or some other invalid node_id_t value
-	}
-
-	template <class ElementType>
-	element_id_t ElementList<ElementType>::append_element_name(std::string &name) {
-		element_id_t eid = name_map.size();
-		name_map[name] = eid;
-		return eid;
-	}
-
-	template <class ElementType>
-	bool ElementList<ElementType>::add_element(ElementType *e) {
-		if (find_element_name(e->name) == -1) {
-			elements.push_back(*e);
-			append_element_name(e->name);
-			return true;
-		}
-		return false; // Element with the same name already exists
-	}
-
 	bool Netlist::add_voltage_source(VoltageSource *v) {
 		return voltage_sources.add_element(v);
 	}

@@ -99,9 +99,31 @@ namespace spic {
 			public:
 			std::vector<ElementType> elements;
 			std::unordered_map<std::string, element_id_t> name_map;
-			element_id_t find_element_name(std::string &name);
-			element_id_t append_element_name(std::string &name);
-			bool add_element(ElementType *e);
+
+			element_id_t find_element_name(std::string &name) {
+				auto it = name_map.find(name);
+				if (it != name_map.end()) {
+					return it->second;
+				}
+				return -1; // Or some other invalid node_id_t value
+			}
+			element_id_t append_element_name(std::string &name) {
+				element_id_t eid = name_map.size();
+				name_map[name] = eid;
+				return eid;
+			}
+			bool add_element(ElementType *e) {
+				if (find_element_name(e->name) == -1) {
+					elements.push_back(*e);
+					append_element_name(e->name);
+					return true;
+				}
+				return false; // Element with the same name already exists
+			}
+			int size() {
+				// std::cout << "Hello world" << "\n";
+				return elements.size();
+			}
 		};
 
 	/* Netlist class contains a list of pointers to each element type */

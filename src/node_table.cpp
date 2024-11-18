@@ -39,6 +39,10 @@ namespace spic {
 		std::cout << "Node name not found" << std::endl;
 		return nullptr;
 	}
+
+	int NodeTable::size() {
+		return table.size();
+	}
 }
 
 /* Support of << operator for printing a NodeTable */
