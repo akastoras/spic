@@ -10,8 +10,8 @@
 #include "netlist.h"
 #include "mna.h"
 
-spic::Netlist *netlist;
-spic::NodeTable *node_table;
+spic::Netlist *netlist_gptr;
+spic::NodeTable *node_table_gptr;
 extern int error_count;
 
 int main(int argc, char **argv)
@@ -29,8 +29,11 @@ int main(int argc, char **argv)
 	}
 
 	// Initialize the structures
-	node_table = new spic::NodeTable();
-	netlist = new spic::Netlist(); 
+	spic::NodeTable node_table = spic::NodeTable();
+	spic::Netlist netlist = spic::Netlist();
+
+	node_table_gptr = &node_table;
+	netlist_gptr = &netlist;
 
 	// Call the parser
 	yyparse();
@@ -38,18 +41,16 @@ int main(int argc, char **argv)
 	if (error_count > 0) {
 		exit(1);
 	}
+	
+	std::cout << " * Finished parsing...\n" << std::endl;
+	std::cout << node_table;
+	std::cout << netlist;
+	std::cout << std::endl << " * Generating MNA System...\n" << std::endl;
 
-	int no_nodes = node_table->size();
+	spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
 
-	spic::MNASystemDC system = spic::MNASystemDC(*netlist, no_nodes);
+	std::cout << system << std::endl;
 
-	// Print the basic structures
-	std::cout << *node_table;
-	std::cout << *netlist;
-
-	// Free memory & Cleanup
-	delete node_table;
-	delete netlist;
 	fclose(yyin);
 
 	return 0;

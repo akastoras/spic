@@ -159,3 +159,12 @@ std::ostream& operator<<(std::ostream &out, spic::Diode &d);
 std::ostream& operator<<(std::ostream &out, spic::MOS &m);
 std::ostream& operator<<(std::ostream &out, spic::BJT &q);
 std::ostream& operator<<(std::ostream &out, spic::Netlist &nl);
+
+template <class ElementType>
+	std::ostream& operator<<(std::ostream &out, spic::ElementList<ElementType> &el_list) {
+		for (auto it = el_list.elements.begin(); it != el_list.elements.end(); ++it) {
+			out << *it << std::endl;
+		}
+
+		return out;
+	}

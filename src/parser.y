@@ -16,8 +16,8 @@
 	spic::node_id_t find_or_append_node_str(std::string *node);
 	void check_add_element(bool res, const std::string &element_name, const std::string &name);
 
-	extern spic::NodeTable *node_table;
-	extern spic::Netlist *netlist;
+	extern spic::NodeTable *node_table_gptr;
+	extern spic::Netlist *netlist_gptr;
 %}
 
 %define parse.error verbose
@@ -75,7 +75,7 @@
 /* Rules */
 
 // Structure of the file
-spicefile: netlist { netlist = $1; }
+spicefile: netlist
 
 // Netlist can contain multiple elements
 netlist:  netlist v { $$ = $1; check_add_element($$->add_voltage_source($2),"Voltage Source",	$2->name); delete $2; }
@@ -86,14 +86,14 @@ netlist:  netlist v { $$ = $1; check_add_element($$->add_voltage_source($2),"Vol
 		| netlist d { $$ = $1; check_add_element($$->add_diode($2), 		"Diode",			$2->name); delete $2; }
 		| netlist m { $$ = $1; check_add_element($$->add_mos($2), 			"MOS",				$2->name); delete $2; }
 		| netlist q { $$ = $1; check_add_element($$->add_bjt($2), 			"BJT",				$2->name); delete $2; }
-		| v { $$ = netlist; $$->add_voltage_source($1); delete $1; }
-		| i { $$ = netlist; $$->add_current_source($1); delete $1; }
-		| r { $$ = netlist; $$->add_resistor($1);       delete $1; }
-		| c { $$ = netlist; $$->add_capacitor($1);      delete $1; }
-		| l { $$ = netlist; $$->add_inductor($1);       delete $1; }
-		| d { $$ = netlist; $$->add_diode($1);          delete $1; }
-		| m { $$ = netlist; $$->add_mos($1);            delete $1; }
-		| q { $$ = netlist; $$->add_bjt($1);            delete $1; }
+		| v { $$ = netlist_gptr; $$->add_voltage_source($1); delete $1; }
+		| i { $$ = netlist_gptr; $$->add_current_source($1); delete $1; }
+		| r { $$ = netlist_gptr; $$->add_resistor($1);       delete $1; }
+		| c { $$ = netlist_gptr; $$->add_capacitor($1);      delete $1; }
+		| l { $$ = netlist_gptr; $$->add_inductor($1);       delete $1; }
+		| d { $$ = netlist_gptr; $$->add_diode($1);          delete $1; }
+		| m { $$ = netlist_gptr; $$->add_mos($1);            delete $1; }
+		| q { $$ = netlist_gptr; $$->add_bjt($1);            delete $1; }
 
 // Specifications for each element
 
@@ -122,18 +122,18 @@ value: T_FLOAT
 /* Search for an int node in the NodeTable and if it doesn't exist append it */
 spic::node_id_t find_or_append_node_int(int node)
 {
-	spic::node_id_t id = node_table->find_node(node);
+	spic::node_id_t id = node_table_gptr->find_node(node);
 	if (id < 0)
-		id = node_table->append_node(node);
+		id = node_table_gptr->append_node(node);
 	return id;
 }
 
 /* Search for a string node in the NodeTable and if it doesn't exist append it */
 spic::node_id_t find_or_append_node_str(std::string *node)
 {
-	spic::node_id_t id = node_table->find_node(node);
+	spic::node_id_t id = node_table_gptr->find_node(node);
 	if (id < 0)
-		id = node_table->append_node(node);
+		id = node_table_gptr->append_node(node);
 	return id;
 }
 
