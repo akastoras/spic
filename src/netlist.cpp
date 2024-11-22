@@ -114,14 +114,30 @@ std::ostream& operator<<(std::ostream &out, spic::BJT &q) {
 /* Support of << operator for printing a NodeTable */
 std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
 #if VERBOSE_NETLIST == 2
-	out << nl.voltage_sources << std::endl;
-	out << nl.current_sources << std::endl;
-	out << nl.resistors       << std::endl;
-	out << nl.capacitors      << std::endl;
-	out << nl.inductors       << std::endl;
-	out << nl.diodes          << std::endl;
-	out << nl.mos             << std::endl;
-	out << nl.bjt             << std::endl;
+	if (nl.voltage_sources.elements.size() !=0) {
+		out << nl.voltage_sources << std::endl;
+	}
+	if (nl.current_sources.size() != 0) {
+		out << nl.current_sources << std::endl;
+	}
+	if (nl.resistors.size() != 0) {
+		out << nl.resistors       << std::endl;
+	}
+	if (nl.capacitors.size() != 0) {
+		out << nl.capacitors      << std::endl;
+	}
+	if (nl.inductors.size() != 0) {
+		out << nl.inductors       << std::endl;
+	}
+	if (nl.diodes.size() != 0) {
+		out << nl.diodes          << std::endl;
+	}
+	if (nl.mos.size() != 0) {
+		out << nl.mos             << std::endl;
+	}
+	if (nl.bjt.size() != 0) {
+		out << nl.bjt             << std::endl;
+	}
 #endif
 #if VERBOSE_NETLIST >= 1
 	out << "Netlist consists of:" << std::endl;

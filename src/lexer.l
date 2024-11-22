@@ -61,6 +61,8 @@ FLOAT		{FLOAT1}|{FLOAT2}
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 {NAME}				{ yylval.strval = new std::string(yytext); TOUPPER(yylval.strval); return print_token(T_NAME); }
 
+"+"					{ return print_token(T_PLUS); }
+"-"					{ return print_token(T_MINUS); }
 "L="				{ return print_token(T_LENGTH); }
 "W="				{ return print_token(T_WIDTH); }
 "area="				{ return print_token(T_AREA);}
@@ -132,7 +134,11 @@ int print_token(int token)
 	} else if (token == T_M) {
 		std::cout << "Found MOS Transistor " << *yylval.strval << "\n";
 	} else if (token == T_Q) {
-		std::cout << "Found BJT Transistor " << *yylval.strval << "\n";
+		std::cout << "Found BJT Transistor " << *yylval.strval << "\n";	
+	} else if (token == T_MINUS) {
+		std::cout << "Found Minus\n";
+	} else if (token ==T_PLUS) {
+		std::cout << "Found Plus\n";
 	} else if (token == T_INTEGER) {
 		std::cout << "Found Integer " << yylval.intval << "\n";
 	} else if (token == T_FLOAT) {

@@ -52,6 +52,8 @@
 %token	T_LENGTH	"MOS Length"
 %token	T_WIDTH		"MOS Width"
 %token	T_AREA		"Area Factor of BJT/Diode"
+%token	T_MINUS		"Minus Operator"
+%token 	T_PLUS		"Plus Operator"
 
 %token	<intval>	T_INTEGER	"Integer Number"
 %token	<floatval>	T_FLOAT		"Floating Point Number"
@@ -114,7 +116,11 @@ q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $
 node: T_INTEGER { $$ = find_or_append_node_int($1); }
 	| T_NAME { $$ = find_or_append_node_str($1); delete $1; }
 
-value: T_FLOAT
+value: T_PLUS T_FLOAT { $$ = $2; }
+	| T_MINUS T_FLOAT { $$ = -$2; }
+	| T_FLOAT
+	| T_PLUS T_INTEGER { $$ = (float) $2; }
+	| T_MINUS T_INTEGER { $$ = (float) -$2; }
 	| T_INTEGER { $$ = (float) $1; }
 
 %%
