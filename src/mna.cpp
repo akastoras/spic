@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Dense>
@@ -87,9 +88,43 @@ namespace spic {
 	}
 }
 
+static void printSystem(const Eigen::MatrixXf& A, const Eigen::VectorXf& b) {
+    int rows = A.rows();
+    int midRow = rows / 2; // Middle row index for alignment
+    int width = 5; // Fixed width for each element
+
+    for (int i = 0; i < rows; ++i) {
+        // Print row of A
+        std::cout << "[";
+        for (int j = 0; j < A.cols(); ++j) {
+            std::cout << std::setw(width) << A(i, j);
+            if (j < A.cols() - 1) std::cout << " ";
+        }
+        std::cout << "] ";
+
+        // Print corresponding x
+        std::cout << "[x" << i + 1 << "] ";
+
+        // Print '=' only on the middle row
+        if (i == midRow) {
+            std::cout << "= ";
+        } else {
+            std::cout << "  ";
+        }
+
+        // Print corresponding b
+        std::cout << "[" << std::setw(width) << b(i) << "]";
+
+        std::cout << std::endl;
+    }
+}
+
+
 std::ostream& operator<<(std::ostream &out, spic::MNASystemDC &system)
 {
-	out << "Static Matrix:\n" << system.static_matrix << std::endl;
-	out << "Source Vector:\n" << system.source_vector << std::endl;
+	printSystem(system.static_matrix, system.source_vector);
+	// out << "Static Matrix:\n" << system.static_matrix << std::endl;
+	// out << "Source Vector:\n" << system.source_vector << std::endl;
 	return out;
 }
+
