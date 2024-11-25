@@ -44,14 +44,4 @@ void Logger::log(LogLevel level, std::ostringstream& message)
 		// Output to console
 		std::cout << logEntry.str();
 	}
-	// Create log entry
-	// std::ostringstream logEntry;
-	// logEntry << "[" << timestamp << "] "
-	// 			<< levelToString(level) << ": " << message.str()
-	// 			<< std::endl;
-
-	// Output to console
-	// std::cout << logEntry.str();
-
-	// Output to log file
 }
