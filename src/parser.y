@@ -2,6 +2,7 @@
 	#include <string>
 	#include "node_table.h"
 	#include "netlist.h"
+	#include "commands.h"
 }
 
 %{
@@ -15,9 +16,7 @@
 	spic::node_id_t find_or_append_node_int(int node);
 	spic::node_id_t find_or_append_node_str(std::string *node);
 	void check_add_element(bool res, const std::string &element_name, const std::string &name);
-
-	extern spic::NodeTable *node_table_gptr;
-	extern spic::Netlist *netlist_gptr;
+	void check_dc_sweep(bool res, const std::string &element_name, const std::string &name);
 %}
 
 %define parse.error verbose
@@ -26,7 +25,6 @@
 	int					intval;
 	float				floatval;
 	std::string			*strval;
-	spic::Netlist		*netlist;
 	spic::VoltageSource	*voltage_source;
 	spic::CurrentSource *current_source;
 	spic::Resistor 		*resistor;
@@ -45,7 +43,7 @@
 %token	<strval> T_R	"Resistor"
 %token	<strval> T_C	"Capacitor"
 %token	<strval> T_L	"Inductor"
-%token	<strval> T_D	"Diod"
+%token	<strval> T_D	"Diode"
 %token	<strval> T_M	"MOS Transistor"
 %token	<strval> T_Q	"BJT Transistor"
 
@@ -53,7 +51,11 @@
 %token	T_WIDTH		"MOS Width"
 %token	T_AREA		"Area Factor of BJT/Diode"
 %token	T_MINUS		"Minus Operator"
-%token 	T_PLUS		"Plus Operator"
+%token	T_PLUS		"Plus Operator"
+%token	T_OPTIONS	".OPTIONS"
+%token	T_SPD		"MNA static matrix is SPD"
+%token	T_CUSTOM	"MNA system should be solved with custom solver"
+%token	T_DC		".DC"
 
 %token	<intval>	T_INTEGER	"Integer Number"
 %token	<floatval>	T_FLOAT		"Floating Point Number"
@@ -63,7 +65,6 @@
 
 %type <floatval> value
 %type <intval> node
-%type <netlist> netlist spicefile
 %type <voltage_source> v
 %type <current_source> i
 %type <resistor> r
@@ -77,25 +78,18 @@
 /* Rules */
 
 // Structure of the file
-spicefile: netlist
+spicefile: netlist commands
 
 // Netlist can contain multiple elements
-netlist:  netlist v { $$ = $1; check_add_element($$->add_voltage_source($2),"Voltage Source",	$2->name); delete $2; }
-		| netlist i { $$ = $1; check_add_element($$->add_current_source($2),"Current Source",	$2->name); delete $2; }
-		| netlist r { $$ = $1; check_add_element($$->add_resistor($2), 		"Resistor",			$2->name); delete $2; }
-		| netlist c { $$ = $1; check_add_element($$->add_capacitor($2), 	"Capacitor",		$2->name); delete $2; }
-		| netlist l { $$ = $1; check_add_element($$->add_inductor($2), 		"Inductor",			$2->name); delete $2; }
-		| netlist d { $$ = $1; check_add_element($$->add_diode($2), 		"Diode",			$2->name); delete $2; }
-		| netlist m { $$ = $1; check_add_element($$->add_mos($2), 			"MOS",				$2->name); delete $2; }
-		| netlist q { $$ = $1; check_add_element($$->add_bjt($2), 			"BJT",				$2->name); delete $2; }
-		| v { $$ = netlist_gptr; $$->add_voltage_source($1); delete $1; }
-		| i { $$ = netlist_gptr; $$->add_current_source($1); delete $1; }
-		| r { $$ = netlist_gptr; $$->add_resistor($1);       delete $1; }
-		| c { $$ = netlist_gptr; $$->add_capacitor($1);      delete $1; }
-		| l { $$ = netlist_gptr; $$->add_inductor($1);       delete $1; }
-		| d { $$ = netlist_gptr; $$->add_diode($1);          delete $1; }
-		| m { $$ = netlist_gptr; $$->add_mos($1);            delete $1; }
-		| q { $$ = netlist_gptr; $$->add_bjt($1);            delete $1; }
+netlist:  netlist v { check_add_element(netlist.add_voltage_source($2),	"Voltage Source",	$2->name); delete $2; }
+		| netlist i { check_add_element(netlist.add_current_source($2),	"Current Source",	$2->name); delete $2; }
+		| netlist r { check_add_element(netlist.add_resistor($2), 		"Resistor",			$2->name); delete $2; }
+		| netlist c { check_add_element(netlist.add_capacitor($2), 		"Capacitor",		$2->name); delete $2; }
+		| netlist l { check_add_element(netlist.add_inductor($2), 		"Inductor",			$2->name); delete $2; }
+		| netlist d { check_add_element(netlist.add_diode($2), 			"Diode",			$2->name); delete $2; }
+		| netlist m { check_add_element(netlist.add_mos($2), 			"MOS",				$2->name); delete $2; }
+		| netlist q { check_add_element(netlist.add_bjt($2), 			"BJT",				$2->name); delete $2; }
+		| /* empty */
 
 // Specifications for each element
 
@@ -123,23 +117,30 @@ value: T_PLUS T_FLOAT { $$ = $2; }
 	| T_MINUS T_INTEGER { $$ = (float) -$2; }
 	| T_INTEGER { $$ = (float) $1; }
 
+// Options for the simulation
+commands: T_OPTIONS T_SPD { commands.options.spd = true; }
+		| T_OPTIONS T_CUSTOM { commands.options.custom = true; }
+		| T_DC T_V value value value { check_dc_sweep(commands.add_v_dc_sweep(*$2, $3, $4, $5), "Voltage Source", *$2); }
+		| T_DC T_I value value value { check_dc_sweep(commands.add_i_dc_sweep(*$2, $3, $4, $5), "Current Source", *$2); }
+		| /* empty */
+
 %%
 
 /* Search for an int node in the NodeTable and if it doesn't exist append it */
 spic::node_id_t find_or_append_node_int(int node)
 {
-	spic::node_id_t id = node_table_gptr->find_node(node);
+	spic::node_id_t id = node_table.find_node(node);
 	if (id < 0)
-		id = node_table_gptr->append_node(node);
+		id = node_table.append_node(node);
 	return id;
 }
 
 /* Search for a string node in the NodeTable and if it doesn't exist append it */
 spic::node_id_t find_or_append_node_str(std::string *node)
 {
-	spic::node_id_t id = node_table_gptr->find_node(node);
+	spic::node_id_t id = node_table.find_node(node);
 	if (id < 0)
-		id = node_table_gptr->append_node(node);
+		id = node_table.append_node(node);
 	return id;
 }
 
@@ -147,5 +148,12 @@ void check_add_element(bool res, const std::string &element_name, const std::str
 {
 	if (!res) {
 		yyerror(("Duplicate " + element_name + " name: '" + name + "'").c_str());
+	}
+}
+
+void check_dc_sweep(bool res, const std::string &element_name, const std::string &name)
+{
+	if (!res) {
+		yyerror(("DC Sweep on non-existent " + element_name + " name: '" + name + "'").c_str());
 	}
 }

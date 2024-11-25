@@ -6,19 +6,21 @@
 #include "parser.h"
 #include "lexer.h"
 
+#include "commands.h"
 #include "node_table.h"
 #include "netlist.h"
 #include "mna.h"
 #include "util.h"
 
-spic::Netlist *netlist_gptr;
-spic::NodeTable *node_table_gptr;
+spic::Netlist   netlist;
+spic::NodeTable node_table;
+spic::Commands  commands;
 extern int error_count;
 
 int main(int argc, char **argv)
 {
 	Logger logger = Logger(std::cout);
-	
+
 	// Get input file.
 	if (argc > 1) {
 		// Declare which file to parse
@@ -34,11 +36,6 @@ int main(int argc, char **argv)
 
 	// Initialize the structures
 	logger.log(INFO, "Initializing netlist...");
-	spic::NodeTable node_table = spic::NodeTable();
-	spic::Netlist netlist = spic::Netlist();
-
-	node_table_gptr = &node_table;
-	netlist_gptr = &netlist;
 
 	// Call the parser
 	logger.log(INFO, "Calling parser...");
@@ -58,12 +55,10 @@ int main(int argc, char **argv)
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
 	spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
-	// logger.increaseTabs();
-	// std::ostringstream strstream;
-	// strstream << system << std::endl;
+	
 	std::cout << system << std::endl;
-	// logger.log(INFO, strstream);
-	// logger.decreaseTabs();
+
+	
 
 	logger.log(INFO, "Simulator finished. Exiting...");
 	fclose(yyin);

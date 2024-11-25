@@ -139,15 +139,17 @@ namespace spic {
 		spic::ElementList<BJT>           bjt;
 
 		bool add_voltage_source(VoltageSource *v);
-		bool add_current_source(CurrentSource *c);
+		bool add_current_source(CurrentSource *i);
 		bool add_resistor(Resistor *r);
 		bool add_capacitor(Capacitor *c);
-		bool add_inductor(Inductor *i);
+		bool add_inductor(Inductor *l);
 		bool add_diode(Diode *d);
 		bool add_mos(MOS *m);
 		bool add_bjt(BJT *q);
 	};
+
 }
+extern spic::Netlist netlist;
 
 /* Support of << operator for printing circuit elements */
 std::ostream& operator<<(std::ostream &out, spic::VoltageSource &v);

@@ -20,7 +20,7 @@ include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
 flex_target(LEXER "${SRC_DIR}/lexer.l" "${LEXER_OUT}" DEFINES_FILE "${BUILD_DIR}/lexer.h")
-bison_target(PARSER "${SRC_DIR}/parser.y" "${PARSER_OUT}" DEFINES_FILE "${BUILD_DIR}/parser.h")
+bison_target(PARSER "${SRC_DIR}/parser.y" "${PARSER_OUT}" DEFINES_FILE "${BUILD_DIR}/parser.h" COMPILE_FLAGS "-Wcounterexamples")
 add_flex_bison_dependency(LEXER PARSER)
 
 # Collect all .cpp files in the src directory

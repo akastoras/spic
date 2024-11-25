@@ -29,7 +29,7 @@
 %option noyywrap
 
 /* Declare Start Conditions */
-%x COMMENT ELEMENT_PARAMS END
+%x COMMENT ELEMENT_PARAMS OPTIONS COMMANDS END
 
 WHITECHAR	[ \r\v\n]
 
@@ -65,7 +65,33 @@ FLOAT		{FLOAT1}|{FLOAT2}
 "-"					{ return print_token(T_MINUS); }
 "L="				{ return print_token(T_LENGTH); }
 "W="				{ return print_token(T_WIDTH); }
-"area="				{ return print_token(T_AREA);}
+"area="				{ return print_token(T_AREA); }
+
+.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
+}
+
+<COMMANDS>{
+\n		{ BEGIN(INITIAL); }
+
+{WHITECHAR}			{ /* Ignore white spaces */ }
+
+"V"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); return print_token(T_V); }
+"I"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); return print_token(T_I); }
+{INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
+{FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
+
+.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
+}
+
+<OPTIONS>{
+\n		{ BEGIN(INITIAL); }
+
+{WHITECHAR}			{ /* Ignore white spaces */ }
+
+"SPD"				{ return print_token(T_SPD); }
+"CUSTOM"			{ return print_token(T_CUSTOM); }
+
+.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
 <END>{
@@ -91,7 +117,10 @@ FLOAT		{FLOAT1}|{FLOAT2}
 "M"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_M); }
 "Q"{NAME}			{ yylval.strval = new std::string(yytext+1); TOUPPER(yylval.strval); BEGIN(ELEMENT_PARAMS); return print_token(T_Q); }
 
-"+"					{ BEGIN(ELEMENT_PARAMS); }
+".OPTIONS"			{ BEGIN(OPTIONS); return print_token(T_OPTIONS); }
+".DC"				{ BEGIN(COMMANDS); return print_token(T_DC); }
+
+"+"					{ BEGIN(ELEMENT_PARAMS); return print_token(T_PLUS); }
 
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
@@ -151,6 +180,14 @@ int print_token(int token)
 		std::cout << "Found Area Factor of BJT/Diode\n";
 	} else if (token == T_NAME) {
 		std::cout << "Found Name " << *yylval.strval << "\n";
+	} else if (token == T_OPTIONS) {
+		std::cout << "Found Options Command\n";
+	} else if (token == T_DC) {
+		std::cout << "Found DC Command\n";
+	} else if (token == T_SPD) {
+		std::cout << "Found SPD Option\n";
+	} else if (token == T_CUSTOM) {
+		std::cout << "Found Custom Option\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

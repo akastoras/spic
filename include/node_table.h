@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 
-namespace spic {
+namespace spic {	
 	using node_id_t = int;
 
 	class NodeTable {
@@ -25,6 +25,8 @@ namespace spic {
 		int size();
 	};
 }
+
+extern spic::NodeTable node_table;
 
 std::ostream& operator<<(std::ostream &out, spic::NodeTable const& nt);
 
