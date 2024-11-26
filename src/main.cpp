@@ -9,8 +9,9 @@
 #include "commands.h"
 #include "node_table.h"
 #include "netlist.h"
-#include "mna.h"
+#include "system.h"
 #include "util.h"
+#include "solver.h"
 
 spic::Netlist   netlist;
 spic::NodeTable node_table;
@@ -58,7 +59,8 @@ int main(int argc, char **argv)
 	
 	std::cout << system << std::endl;
 
-	
+	spic::Solver slv = spic::Solver(spic::Solver::LU, 0, system);
+	slv.decompose();
 
 	logger.log(INFO, "Simulator finished. Exiting...");
 	fclose(yyin);

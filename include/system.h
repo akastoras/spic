@@ -5,16 +5,22 @@
 #include "netlist.h"
 
 namespace spic {
-	class MNASystemDC {
+	class System {
+		public:
+		// Matrices of system
+		int n;
+		Eigen::MatrixXd A; // DC Coefficient matrix
+		Eigen::VectorXd x; // Unknown Variable matrix
+		Eigen::VectorXd b; // Matrix with source values
+
+		System(int n) : n(n), A(n, n), b(n), x(n) {}
+	};
+
+	class MNASystemDC : public System {
 		public:
 		MNASystemDC(Netlist &netlist, int total_nodes);
 		MNASystemDC(Netlist &netlist, int total_nodes, int dim);
 
-		// Matrices of system
-		Eigen::MatrixXd static_matrix; // DC Coefficient matrix
-		Eigen::VectorXd node_VC_vector; // Unknown Variable matrix
-		Eigen::VectorXd source_vector; // Matrix with source values
-		
 		private:
 		Netlist &netlist;
 		int total_nodes;

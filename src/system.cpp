@@ -5,24 +5,22 @@
 
 #include "netlist.h"
 
-#include "mna.h"
+#include "system.h"
 
 namespace spic {
-	MNASystemDC::MNASystemDC(Netlist &netlist, int total_nodes) 
+	MNASystemDC::MNASystemDC(Netlist &netlist, int total_nodes)
 	: MNASystemDC(netlist, total_nodes, total_nodes - 1 + netlist.voltage_sources.size() + netlist.inductors.size()) {}
 
 	MNASystemDC::MNASystemDC(Netlist &netlist, int total_nodes, int MNA_matrix_dim)
-		: netlist(netlist), total_nodes(total_nodes),
-		static_matrix(MNA_matrix_dim, MNA_matrix_dim),
-		source_vector(MNA_matrix_dim)
+		: netlist(netlist), total_nodes(total_nodes), System(MNA_matrix_dim)
 	{
 		int total_voltage_sources = netlist.voltage_sources.size();
 		int total_inductors = netlist.inductors.size();
 		int node_pos, node_neg, matrix_inductor_idx, matrix_voltage_idx;
 
 		// Initialize matrices
-		static_matrix.setZero();
-		source_vector.setZero();
+		A.setZero();
+		b.setZero();
 
 		// Fill the matrix with the stamps of the resistors
 		for (auto it = netlist.resistors.elements.begin(); it != netlist.resistors.elements.end(); ++it) {
@@ -33,7 +31,7 @@ namespace spic {
 		for (auto it = netlist.current_sources.elements.begin(); it != netlist.current_sources.elements.end(); ++it) {
 			add_current_source_stamp(it->node_positive, it->node_negative, it->value);
 		}
-		
+
 		// Fill the matrix with the stamps of the voltage sources
 		for (int i = 0; i < total_voltage_sources; i++) {
 			node_pos = netlist.voltage_sources.elements[i].node_positive;
@@ -59,14 +57,14 @@ namespace spic {
 	void MNASystemDC::add_resistor_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
 		double conductance = 1 / value;
 		if (node_positive > 0 && node_negative > 0) {
-			static_matrix(node_positive-1, node_negative-1) -= conductance;
-			static_matrix(node_negative-1, node_positive-1) -= conductance;
+			A(node_positive-1, node_negative-1) -= conductance;
+			A(node_negative-1, node_positive-1) -= conductance;
 		}
 		if (node_positive > 0) {
-			static_matrix(node_positive-1, node_positive-1) += conductance;
+			A(node_positive-1, node_positive-1) += conductance;
 		}
 		if (node_negative > 0) {
-			static_matrix(node_negative-1, node_negative-1) += conductance;
+			A(node_negative-1, node_negative-1) += conductance;
 		}
 	}
 
@@ -77,10 +75,10 @@ namespace spic {
 	 */
 	void MNASystemDC::add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
 		if (node_positive > 0) {
-			source_vector(node_positive - 1) -= value;
+			b(node_positive - 1) -= value;
 		}
 		if (node_negative > 0) {
-			source_vector(node_negative - 1) += value;
+			b(node_negative - 1) += value;
 		}
 	}
 
@@ -97,14 +95,14 @@ namespace spic {
 	 */
 	void MNASystemDC::add_voltage_source_stamp(node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value) {
 		int matrix_voltage_idx = total_nodes - 1 + voltage_src_id;
-		source_vector(matrix_voltage_idx) = value;
+		b(matrix_voltage_idx) = value;
 		if (node_positive > 0) {
-			static_matrix(matrix_voltage_idx, node_positive - 1) += 1;
-			static_matrix(node_positive - 1, matrix_voltage_idx) += 1;
+			A(matrix_voltage_idx, node_positive - 1) += 1;
+			A(node_positive - 1, matrix_voltage_idx) += 1;
 		}
 		if (node_negative > 0) {
-			static_matrix(matrix_voltage_idx, node_negative - 1) -= 1;
-			static_matrix(node_negative - 1, matrix_voltage_idx) -= 1;
+			A(matrix_voltage_idx, node_negative - 1) -= 1;
+			A(node_negative - 1, matrix_voltage_idx) -= 1;
 		}
 	}
 }
@@ -122,7 +120,7 @@ static std::vector<int> getMaxWidths(const Eigen::MatrixXd& A, const Eigen::Vect
 		for (int j = 0; j < A.cols(); ++j) {
 			str = std::to_string(A(i, j));
 			str.erase(str.find_last_not_of('0') + 1, std::string::npos);
-			
+
 			width = str.length();
 			if (width > maxWidths[j]) {
 				maxWidths[j] = width;
@@ -131,7 +129,7 @@ static std::vector<int> getMaxWidths(const Eigen::MatrixXd& A, const Eigen::Vect
 
 		str = std::to_string(b(i));
 		str.erase(str.find_last_not_of('0') + 1, std::string::npos);
-		
+
 		width = str.length();
 		if (width > maxWidthB) {
 			maxWidthB = width;
@@ -181,7 +179,7 @@ static void printSystem(const Eigen::MatrixXd& A, const Eigen::VectorXd& b) {
 /* Support of << operator for printing a MNASystemDC object*/
 std::ostream& operator<<(std::ostream &out, spic::MNASystemDC &system)
 {
-	printSystem(system.static_matrix, system.source_vector);
+	printSystem(system.A, system.b);
 	return out;
 }
 
