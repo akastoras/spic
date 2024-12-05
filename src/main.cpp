@@ -16,10 +16,13 @@
 spic::Netlist   netlist;
 spic::NodeTable node_table;
 spic::Commands  commands;
+
 extern int error_count;
 
 int main(int argc, char **argv)
 {
+	commands.options = {false, false};
+
 	Logger logger = Logger(std::cout);
 
 	// Get input file.
@@ -41,14 +44,14 @@ int main(int argc, char **argv)
 	// Call the parser
 	logger.log(INFO, "Calling parser...");
 	yyparse();
-	
+
 	if (error_count > 0) {
 		logger.log(ERROR, "Finished parsing with errors.");
 		exit(1);
 	} else {
 		logger.log(INFO, "Parsing finished successfully.");
 	}
-	
+
 	// Show the node table and the netlist
 	std::cout << node_table;
 	std::cout << netlist;
@@ -56,11 +59,17 @@ int main(int argc, char **argv)
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
 	spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
-	
-	std::cout << system << std::endl;
 
-	spic::Solver slv = spic::Solver(spic::Solver::LU, 0, system);
+	// std::cout << system << std::endl;
+
+	spic::Solver slv = spic::Solver(system, commands.options, logger);
+
+	Eigen::MatrixXd A_unchained = system.A;
+
 	slv.decompose();
+	slv.solve(system.b);
+
+	std::cout << "Residual: " << (A_unchained * system.x - system.b).norm() << "\n";
 
 	logger.log(INFO, "Simulator finished. Exiting...");
 	fclose(yyin);

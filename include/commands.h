@@ -22,7 +22,7 @@ namespace spic {
 		options_t options;
 		std::vector<DCSweep> v_dc_sweeps;
 		std::vector<DCSweep> i_dc_sweeps;
-		
+
 		Commands() { options = {0}; }
 		bool add_v_dc_sweep(std::string &source_name, float start_value, float end_value, float step);
 		bool add_i_dc_sweep(std::string &source_name, float start_value, float end_value, float step);
