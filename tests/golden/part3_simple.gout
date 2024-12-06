@@ -1,0 +1,128 @@
+
+No compatibility mode selected!
+
+
+Circuit: * spice netlist of part1-parser.pdf
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+
+No. of Data Rows : 1
+	Node                                  Voltage
+	----                                  -------
+	----	-------
+	V(1)                             1.885272e+00
+	V(8)                             1.000000e+00
+	V(4)                             1.988799e+00
+	V(6)                             1.988143e+00
+	V(7)                             3.988143e+00
+	V(2)                             1.808787e+00
+	V(3)                             2.008787e+00
+	V(5)                             2.000000e+00
+
+	Source	Current
+	------	-------
+
+	v1#branch                        -1.98880e-01
+	v2#branch                        -1.99880e-01
+	v3#branch                        0.000000e+00
+
+ Resistor models (Simple linear resistor)
+      model                     R
+
+        rsh                     0
+     narrow                     0
+      short                     0
+        tc1                     0
+        tc2                     0
+        tce                     0
+       defw                 1e-05
+          l                 1e-05
+         kf                     0
+         af                     0
+          r                     0
+     bv_max                 1e+99
+         lf                     1
+         wf                     1
+         ef                     1
+
+ Isource: Independent current source
+     device                    i2                    i1
+         dc                 0.001                 0.001
+          m                     1                     1
+      acmag                     0                     0
+      pulse         -         -
+        sin         -         -
+        exp         -         -
+        pwl         -         -
+       sffm         -         -
+         am         -         -
+    trnoise         -         -
+   trrandom         -         -
+          v               1.98814             -0.988799
+          p           -0.00198814           0.000988799
+    current                 0.001                 0.001
+
+ Resistor: Simple linear resistor
+     device                    r8                    r7                    r6
+      model                     R                     R                     R
+ resistance                    10                  1000                   0.1
+         ac                    10                  1000                   0.1
+      dtemp                     0                     0                     0
+     bv_max                 1e+99                 1e+99                 1e+99
+      noisy                     1                     1                     1
+          i               0.19888                 0.001               0.19988
+          p              0.395532                 0.001             0.0039952
+
+ Resistor: Simple linear resistor
+     device                    r5                    r4                    r3
+      model                     R                     R                     R
+ resistance                   1.5                   0.1                    50
+         ac                   1.5                   0.1                    50
+      dtemp                     0                     0                     0
+     bv_max                 1e+99                 1e+99                 1e+99
+      noisy                     1                     1                     1
+          i             -0.119571              0.118571            0.00382426
+          p             0.0214457             0.0014059           0.000731247
+
+ Resistor: Simple linear resistor
+     device                    r2                    r1
+      model                     R                     R
+ resistance                     1                   1.5
+         ac                     1                   1.5
+      dtemp                     0                     0
+     bv_max                 1e+99                 1e+99
+      noisy                     1                     1
+          i             0.0764851            -0.0764851
+          p            0.00584998            0.00877496
+
+ Vsource: Independent voltage source
+     device                    v3                    v2                    v1
+         dc                     2                   0.2                     2
+      acmag                     0                     0                     0
+      pulse         -         -         -
+        sin         -         -         -
+        exp         -         -         -
+        pwl         -         -         -
+       sffm         -         -         -
+         am         -         -         -
+    trnoise         -         -         -
+   trrandom         -         -         -
+          i                     0              -0.19988              -0.19888
+          p                     0             -0.039976              -0.39776
+
+
+Total analysis time (seconds) = 0
+
+Total elapsed time (seconds) = 0.017 
+
+Total DRAM available = 15696.254 MB.
+DRAM currently available = 5947.500 MB.
+Maximum ngspice program size =   19.906 MB.
+Current ngspice program size =   12.000 MB.
+
+Shared ngspice pages =   10.250 MB.
+Text (code) pages =    5.316 MB.
+Stack = 0 bytes.
+Library pages =    1.961 MB.
+

@@ -14,5 +14,8 @@ R6 3 4 0.1
 R7 8 0 1e3
 R8 4 0 10
 
-.DC V1 0 3 0.01
-.PLOT V(4)
+.OP
+
+* .OPTIONS method=Cholesky
+* .DC V1 0 3 0.01
+* .PRINT V(4)
