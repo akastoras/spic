@@ -119,6 +119,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 
 ".OPTIONS"			{ BEGIN(OPTIONS); return print_token(T_OPTIONS); }
 ".DC"				{ BEGIN(COMMANDS); return print_token(T_DC); }
+".OP"				{ /* Ignore .OP command */ }
 
 "+"					{ BEGIN(ELEMENT_PARAMS); return print_token(T_PLUS); }
 

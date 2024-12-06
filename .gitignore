@@ -11,3 +11,6 @@ build/
 
 .DS_Store
 .vscode
+
+tests/golden/
+tests/output/

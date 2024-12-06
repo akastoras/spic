@@ -15,7 +15,9 @@ add_subdirectory(${EIGEN3_INCLUDE_DIR} ${CMAKE_BINARY_DIR}/eigen_build)
 
 find_package(FLEX 2.6 REQUIRED)
 find_package(BISON 3.0 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS program_options)
 
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(include)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
@@ -29,8 +31,7 @@ file(GLOB SRC_FILES "${SRC_DIR}/*.cpp")
 add_executable(spic ${SRC_FILES} "${LEXER_OUT}" "${PARSER_OUT}")
 
 target_include_directories(spic PRIVATE "${BUILD_DIR}")
-target_link_libraries(spic Eigen3::Eigen)
-
+target_link_libraries(spic Eigen3::Eigen ${Boost_LIBRARIES})
 
 # Check if MY_MACRO is defined and add it to the target
 if(DEFINED VERBOSITY)

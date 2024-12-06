@@ -117,11 +117,16 @@ value: T_PLUS T_FLOAT { $$ = $2; }
 	| T_MINUS T_INTEGER { $$ = (float) -$2; }
 	| T_INTEGER { $$ = (float) $1; }
 
+commands: command commands
+		| /* empty */
+
 // Options for the simulation
-commands: T_OPTIONS T_SPD { commands.options.spd = true; }
-		| T_OPTIONS T_CUSTOM { commands.options.custom = true; }
+command: T_OPTIONS options  
 		| T_DC T_V value value value { check_dc_sweep(commands.add_v_dc_sweep(*$2, $3, $4, $5), "Voltage Source", *$2); }
 		| T_DC T_I value value value { check_dc_sweep(commands.add_i_dc_sweep(*$2, $3, $4, $5), "Current Source", *$2); }
+
+options: options T_SPD { commands.options.spd = true; }
+		| options T_CUSTOM { commands.options.custom = true; }
 		| /* empty */
 
 %%
