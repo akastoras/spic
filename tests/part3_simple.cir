@@ -15,8 +15,9 @@ R7 8 0 1e3
 R8 4 0 10
 
 .op
-* .OPTIONS method=Cholesky
+* .OPTIONS SPD
 .DC V1 1 3 0.2
+* .DC I2 2e-3 3e-3 1e-4
 .DC V2 2 4 0.5
-* .print DC V(4)
-* .print DC V(2)
+.print DC V(4)
+.print DC V(2)

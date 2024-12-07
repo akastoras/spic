@@ -112,28 +112,28 @@ std::ostream& operator<<(std::ostream &out, spic::BJT &q) {
 /* Support of << operator for printing a NodeTable */
 std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
 #if VERBOSE_NETLIST == 2
-	if (nl.voltage_sources.elements.size() !=0) {
+	if (!nl.voltage_sources.elements.empty()) {
 		out << nl.voltage_sources << std::endl;
 	}
-	if (nl.current_sources.size() != 0) {
+	if (!nl.current_sources.empty()) {
 		out << nl.current_sources << std::endl;
 	}
-	if (nl.resistors.size() != 0) {
+	if (!nl.resistors.empty()) {
 		out << nl.resistors       << std::endl;
 	}
-	if (nl.capacitors.size() != 0) {
+	if (!nl.capacitors.empty()) {
 		out << nl.capacitors      << std::endl;
 	}
-	if (nl.inductors.size() != 0) {
+	if (!nl.inductors.empty()) {
 		out << nl.inductors       << std::endl;
 	}
-	if (nl.diodes.size() != 0) {
+	if (!nl.diodes.empty()) {
 		out << nl.diodes          << std::endl;
 	}
-	if (nl.mos.size() != 0) {
+	if (!nl.mos.empty()) {
 		out << nl.mos             << std::endl;
 	}
-	if (nl.bjt.size() != 0) {
+	if (!nl.bjt.empty()) {
 		out << nl.bjt             << std::endl;
 	}
 #endif

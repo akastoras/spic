@@ -29,7 +29,7 @@
 %option noyywrap
 
 /* Declare Start Conditions */
-%x COMMENT ELEMENT_PARAMS OPTIONS COMMANDS END
+%x COMMENT ELEMENT_PARAMS OPTIONS COMMANDS NODES END
 
 WHITECHAR	[ \r\v\n]
 
@@ -94,6 +94,16 @@ FLOAT		{FLOAT1}|{FLOAT2}
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
+<NODES>{
+")"\n		{ BEGIN(INITIAL); }
+{WHITECHAR}			{ /* Ignore white spaces */ }
+
+"DC"				{ /* Ignore DC */ }
+"V("{NAME}/")"		{ yylval.strval = new std::string(yytext+2); TOUPPER(yylval.strval); return print_token(T_VNODE); }
+")"					{ /* Ignore closing parenthesis */ }
+"."					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
+}
+
 <END>{
 {WHITECHAR}			{ /* Ignore white spaces */ }
 <<EOF>>				{ return print_token(T_EOF); }
@@ -120,6 +130,8 @@ FLOAT		{FLOAT1}|{FLOAT2}
 ".OPTIONS"			{ BEGIN(OPTIONS); return print_token(T_OPTIONS); }
 ".DC"				{ BEGIN(COMMANDS); return print_token(T_DC); }
 ".OP"				{ /* Ignore .OP command */ }
+".PLOT"				{ BEGIN(NODES); return print_token(T_PLOT); }
+".PRINT"			{ BEGIN(NODES); return print_token(T_PRINT); }
 
 "+"					{ BEGIN(ELEMENT_PARAMS); return print_token(T_PLUS); }
 
@@ -189,6 +201,12 @@ int print_token(int token)
 		std::cout << "Found SPD Option\n";
 	} else if (token == T_CUSTOM) {
 		std::cout << "Found Custom Option\n";
+	} else if (token == T_PLOT) {
+		std::cout << "Found Plot Command\n";
+	} else if (token == T_PRINT) {
+		std::cout << "Found Print Command\n";
+	} else if (token == T_VNODE) {
+		std::cout << "Found Voltage at Node " << *yylval.strval << "\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

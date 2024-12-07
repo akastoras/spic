@@ -31,4 +31,4 @@ namespace spic {
 	};
 }
 
-std::ostream& operator<<(std::ostream &out, spic::MNASystemDC &system);
+std::ostream& operator<<(std::ostream &out, spic::System &system);

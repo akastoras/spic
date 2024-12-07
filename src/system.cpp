@@ -177,7 +177,7 @@ static void printSystem(const Eigen::MatrixXd& A, const Eigen::VectorXd& b) {
 }
 
 /* Support of << operator for printing a MNASystemDC object*/
-std::ostream& operator<<(std::ostream &out, spic::MNASystemDC &system)
+std::ostream& operator<<(std::ostream &out, spic::System &system)
 {
 	printSystem(system.A, system.b);
 	return out;

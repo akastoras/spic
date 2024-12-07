@@ -28,7 +28,6 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
-	commands.options = {false, false};
 	Logger logger = Logger(std::cout);
 
 	// Define the supported options
@@ -89,6 +88,7 @@ int main(int argc, char* argv[])
 	// Show the node table and the netlist
 	std::cout << node_table;
 	std::cout << netlist;
+	std::cout << commands;
 
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
@@ -96,14 +96,23 @@ int main(int argc, char* argv[])
 
 	// std::cout << system << std::endl;
 
-	spic::Solver slv = spic::Solver(system, commands.options, logger);
+	spic::Solver slv = spic::Solver(system, commands.options.spd, commands.options.custom, logger);
 
-	Eigen::MatrixXd A_unchained = system.A;
+	Eigen::MatrixXd A_cpy = system.A;
 
-	slv.decompose();
+	if (!slv.decompose()) {
+		logger.log(ERROR, "Exiting due to non-SPD MNA system");
+		exit(EXIT_FAILURE);
+	}
 	slv.solve(system.b);
 
-	std::cout << "Residual: " << (A_unchained * system.x - system.b).norm() << "\n";
+	/*TODO: Since we keep a copy for the residual maybe we should do it internally and use it
+	 *	for making decompose perform LU after failed cholesky (maybe also consider out of place)
+	 */
+	logger.log(INFO, "Residual: " + std::to_string((A_cpy * system.x - system.b).norm()));
+
+	// Perform the dc sweeps (if there are any)
+	commands.perform_dc_sweeps(slv);
 
 	// Delete output_dir if it exists and then create it again
 	if (std::filesystem::exists(output_dir)) {
