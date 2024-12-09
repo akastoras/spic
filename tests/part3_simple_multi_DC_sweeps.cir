@@ -16,6 +16,8 @@ R8 4 0 10
 
 .OP
 
+.OPTIONS CUSTOM
+
 .DC V1 0 3 0.01
 .PRINT DC V(4) V(3)
 

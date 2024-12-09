@@ -14,6 +14,8 @@ namespace spic {
 		bool custom;
 		System &system;
 		Logger &logger;
+		Eigen::VectorXi *perm;
+
 		union {
 			Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>> *lu;
 			Eigen::LLT<Eigen::Ref<Eigen::MatrixXd>> *cholesky;
@@ -30,11 +32,11 @@ namespace spic {
 		/* Wrappers for decompose and solve */
 		bool decompose();
 		void solve(Eigen::VectorXd &b);
-		
+
 		private:
 		/* LU custom and integrated decompose and solve functions*/
-		void LU_custom_decompose();
-		void LU_custom_solve();
+		bool LU_custom_decompose();
+		void LU_custom_solve(Eigen::VectorXd &b);
 		void LU_integrated_decompose();
 		void LU_integrated_solve(Eigen::VectorXd &b);
 

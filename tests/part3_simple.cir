@@ -16,6 +16,7 @@ R8 4 0 10
 
 .op
 * .OPTIONS SPD
+.OPTIONS CUSTOM
 .DC V1 2 3 0.5
 * * .DC I2 2e-3 3e-3 1e-4
 * * .DC V2 2 4 0.5

@@ -35,6 +35,16 @@ def read_dc_sweep_file(file_path):
 			sweep.append((float(source_voltage), float(node_voltage)))
 		return sweep
 
+def relerror(a, b):
+	epsilon = 1e-9
+	if a == 0 and b == 0:
+		error = 0
+	elif a == 0 and abs(b) > epsilon:
+		error = abs(a / epsilon)
+	else:
+		error = abs((a - b) / a)
+	return error
+
 def compare_dc_op_files(file1, file2):
 	dc_op1 = read_dc_op_file(file1)
 	dc_op2 = read_dc_op_file(file2)
@@ -47,10 +57,7 @@ def compare_dc_op_files(file1, file2):
 	for node_name in dc_op1:
 		voltage1 = dc_op1[node_name]
 		voltage2 = dc_op2[node_name]
-		if voltage1 == 0:
-			print("Node {} has voltage 0 in golden file".format(node_name))
-			continue # TODO: Do something smarter here
-		error = abs(voltage1 - voltage2) / abs(voltage1)
+		error = relerror(voltage1, voltage2)
 		max_error = max(max_error, error)
 		average_error += error
 	average_error /= len(dc_op1)
@@ -69,7 +76,7 @@ def compare_dc_sweep_files(file1, file2):
 	for i in range(len(sweep1)):
 		source_voltage1, node_voltage1 = sweep1[i]
 		source_voltage2, node_voltage2 = sweep2[i]
-		error = abs(node_voltage1 - node_voltage2) / abs(node_voltage1)
+		error = relerror(node_voltage1, node_voltage2)
 		max_error = max(max_error, error)
 		average_error += error
 	average_error /= len(sweep1)
