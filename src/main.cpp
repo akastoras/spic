@@ -25,6 +25,7 @@ extern int error_count;
 
 namespace po = boost::program_options;
 
+/* Wrapper functions for spic stages of execution */
 void parse_arguments(po::variables_map &vm, int argc, char** argv);
 void parse_spice_file(std::filesystem::path cir_file, Logger &logger);
 void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
@@ -33,6 +34,9 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 
 int main(int argc, char** argv)
 {
+	// TODO: Count and log execution time of decomosition
+	// and average of solve. Also the parsing and the MNA construction
+	// Print all times and a total timer at the end of the program
 	Logger logger = Logger(std::cout);
 
 	// Define the supported options
@@ -47,6 +51,11 @@ int main(int argc, char** argv)
 	// Parse the spice circuit file that constructs the netlist
 	// the node_table and the commands structures
 	parse_spice_file(cir_file, logger);
+
+	// Initialize Parallelism in Eigen
+	int max_threads = omp_get_max_threads();
+	logger.log(INFO, "Using " + std::to_string(max_threads));
+	Eigen::setNbThreads(omp_get_max_threads(max_threads));
 
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");

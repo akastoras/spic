@@ -16,6 +16,7 @@ add_subdirectory(${EIGEN3_INCLUDE_DIR} ${CMAKE_BINARY_DIR}/eigen_build)
 find_package(FLEX 2.6 REQUIRED)
 find_package(BISON 3.0 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
+find_package(OpenMP REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(include)
@@ -31,7 +32,12 @@ file(GLOB SRC_FILES "${SRC_DIR}/*.cpp")
 add_executable(spic ${SRC_FILES} "${LEXER_OUT}" "${PARSER_OUT}")
 
 target_include_directories(spic PRIVATE "${BUILD_DIR}")
-target_link_libraries(spic Eigen3::Eigen ${Boost_LIBRARIES})
+if(OpenMP_CXX_FOUND)
+target_link_libraries(spic PUBLIC Eigen3::Eigen ${Boost_LIBRARIES} OpenMP::OpenMP_CXX)
+else()
+target_link_libraries(spic PUBLIC Eigen3::Eigen ${Boost_LIBRARIES})
+endif()
+
 
 # Check if MY_MACRO is defined and add it to the target
 if(DEFINED VERBOSITY)
