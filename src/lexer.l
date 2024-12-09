@@ -80,11 +80,14 @@ FLOAT		{FLOAT1}|{FLOAT2}
 {INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 
+"+"					{ return print_token(T_PLUS); }
+"-"					{ return print_token(T_MINUS); }
+
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
 <OPTIONS>{
-\n		{ BEGIN(INITIAL); }
+\n					{ BEGIN(INITIAL); }
 
 {WHITECHAR}			{ /* Ignore white spaces */ }
 
@@ -95,7 +98,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 }
 
 <NODES>{
-")"\n		{ BEGIN(INITIAL); }
+\n					{ BEGIN(INITIAL); }
 {WHITECHAR}			{ /* Ignore white spaces */ }
 
 "DC"				{ /* Ignore DC */ }
@@ -130,7 +133,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 ".OPTIONS"			{ BEGIN(OPTIONS); return print_token(T_OPTIONS); }
 ".DC"				{ BEGIN(COMMANDS); return print_token(T_DC); }
 ".OP"				{ /* Ignore .OP command */ }
-".PLOT"				{ BEGIN(NODES); return print_token(T_PLOT); }
+".PLOT"				{ BEGIN(NODES); return print_token(T_PRINT); } // TODO: Fix
 ".PRINT"			{ BEGIN(NODES); return print_token(T_PRINT); }
 
 "+"					{ BEGIN(ELEMENT_PARAMS); return print_token(T_PLUS); }

@@ -2,9 +2,11 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
 
 #include <Eigen/Dense>
 
+#include "util.h"
 #include "solver.h"
 #include "netlist.h"
 
@@ -24,6 +26,7 @@ namespace spic {
 		double end_value;   // End value of sweep
 		double step;
 
+		std::string get_dc_sweep_name(std::string print_node);
 		DCSweep(type_t type, std::string &source_name, double start_value, double end_value, double step)
 			: type(type), source_name(source_name), start_value(start_value), end_value(end_value), step(step) {}
 	
@@ -35,6 +38,7 @@ namespace spic {
 		options_t options;
 		std::vector<DCSweep> v_dc_sweeps;
 		std::vector<DCSweep> i_dc_sweeps;
+		std::filesystem::path dc_sweeps_dir;
 		std::vector<std::string> print_nodes;
 		std::vector<std::string> plot_nodes;
 
@@ -42,7 +46,7 @@ namespace spic {
 		Commands() { options = {0}; }
 		bool add_v_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
 		bool add_i_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
-		void perform_dc_sweeps(Solver &solver);
+		void perform_dc_sweeps(Solver &solver, Logger &logger);
 	};
 }
 

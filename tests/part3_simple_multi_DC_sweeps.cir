@@ -14,13 +14,15 @@ R6 3 4 0.1
 R7 8 0 1e3
 R8 4 0 10
 
+.OP
+
 .DC V1 0 3 0.01
-.PLOT V(4) V(3)
+.PRINT DC V(4) V(3)
 
 .DC V2 1 2 0.1
-.PLOT V(3)
-.PLOT V(4)
+.PRINT DC V(3)
+.PRINT DC V(4)
 
 .DC I1 1 2 0.1
-.PLOT V(3) 
-.PLOT V(4)
+.PRINT DC V(3) 
+.PRINT DC V(4)

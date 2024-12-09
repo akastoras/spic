@@ -14,3 +14,6 @@ build/
 
 tests/golden/
 tests/output/
+tests/eval/
+
+.~lock.*

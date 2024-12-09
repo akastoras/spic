@@ -22,7 +22,7 @@ namespace spic {
 
 	void Solver::LU_integrated_solve(Eigen::VectorXd &b)
 	{
-		logger.log(INFO, "LU_integrated_solve called.");
+		// logger.log(INFO, "LU_integrated_solve called.");
 		// int rank = lu->rank();
 		// if (rank != system.n) {
 		// 	logger.log(ERROR, "Rank of MNA is " + std::to_string(rank) + " which is not equal to dimension " + std::to_string(system.n));
@@ -44,7 +44,7 @@ namespace spic {
 
 	void Solver::cholesky_integrated_solve(Eigen::VectorXd &b)
 	{
-		logger.log(INFO, "cholesky_integrated_solve called.");
+		// logger.log(INFO, "cholesky_integrated_solve called.");
 		system.x = cholesky->solve(b);
 	}
 	

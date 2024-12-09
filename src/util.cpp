@@ -1,6 +1,7 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+
 #include "util.h"
 
 void Logger::log(LogLevel level, const std::string& message)

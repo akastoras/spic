@@ -185,9 +185,10 @@ void add_node_to_list(std::string *node_name)
 		yyerror(("Node " + *node_name + " used in print/plot does not exist").c_str());
 	} else if (std::find(global_node_list_ptr->begin(), global_node_list_ptr->end(), *node_name) == global_node_list_ptr->end()) {
 		global_node_list_ptr->push_back(*node_name);
-	} else {
-		yyerror(("Node" + *node_name + "used in print/plot more than once").c_str());
 	}
+	/* else {
+		yyerror(("Node" + *node_name + "used in print/plot more than once").c_str());
+	} */
 }
 
 void check_commands()

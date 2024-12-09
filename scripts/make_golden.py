@@ -19,14 +19,27 @@ def run_ngspice(cir_file, out_file):
 		lines = file.readlines()
 
 	# Extract the values from the ngspice output
+	# The worst code you will ever see. Here it comes:
 	solution = []
-	for line in lines:
+	first_line = 0
+	end_line = 0
+	for i, line in enumerate(lines):
 		line = line.strip()
-		if line.startswith('V('):
-			parts = line.split()
-			node_name = parts[0][2:-1]
-			value = parts[1]
-			solution.append((node_name, value))
+		line = line.split()
+		if len(line) == 2:
+			if line[0] == "Node" and line[1] == "Voltage":
+				first_line = i + 3
+			if line[0] == "Source" and line[1] == "Current":
+				end_line = i - 1
+				
+	for line in lines[first_line:end_line]:
+		line = line.upper().strip()
+		parts = line.split()
+		node_name = parts[0]
+		value = parts[1]
+		if node_name.startswith('V('):
+			node_name = node_name[2:-1]
+		solution.append((node_name, value))
 
 	return solution
 
@@ -36,7 +49,7 @@ def parse_dc_sweeps(file_path):
 
 	with open(file_path, 'r') as file:
 		for line in file:
-			match = dc_sweep_pattern.match(line.strip())
+			match = dc_sweep_pattern.match(line.upper().strip())
 			if match:
 				dc_sweeps.append({
 					'type': match.group(1),
@@ -51,35 +64,41 @@ def parse_dc_sweeps(file_path):
 def parse_spice_output(file_path):
 	sweeps = []
 	current_sweep = None
-	dc_sweep_pattern = re.compile(r'Index\s+([vi])-sweep\s+v\((\d+)\)')
-	data_pattern = re.compile(r'(\d+)\s+([\d\.\+eE\-]+)\s+([\d\.\+eE\-]+)')
+	dc_sweep_pattern = re.compile(r'INDEX\s+([VI])-SWEEP\s+V\((\S+)\)')
+	data_pattern = re.compile(r'(\d+)\s+([+-]?[\d\.\+eE\-]+)\s+([+-]?[\d\.\+eE\-]+)')
 
 	with open(file_path, 'r') as file:
-		for line in file:
-			line = line.strip()
-			# Check for the start of a new DC sweep
+		lines = file.readlines()
+		i = 0
+		while i < len(lines):
+			line = lines[i].upper().strip()
+
 			match = dc_sweep_pattern.match(line)
 			if match:
-				if current_sweep:
-					sweeps.append(current_sweep)
 				current_sweep = {
 					'sweep_type': match.group(1),
-					'node': int(match.group(2)),
+					'node': match.group(2),
 					'data': []
 				}
-			# Check for data lines within a DC sweep
-			elif current_sweep:
-				match = data_pattern.match(line)
-				if match:
-					index = int(match.group(1))
-					sweep_value = match.group(2)
-					node_value = match.group(3)
-					current_sweep['data'].append((index, sweep_value, node_value))
-
-	# Append the last sweep if it exists
+				i += 1
+				while i < len(lines):
+					line = lines[i].upper().strip()
+					match = data_pattern.match(line)
+					if match:
+						index = int(match.group(1))
+						sweep_value = match.group(2)
+						node_value = match.group(3)
+						current_sweep['data'].append((index, sweep_value, node_value))
+					else:
+						match = dc_sweep_pattern.match(line)
+						if match and lines[i+2].split()[0] == "0":
+							sweeps.append(current_sweep)
+							i -= 1
+							break
+					i += 1
+			i += 1
 	if current_sweep:
 		sweeps.append(current_sweep)
-
 	return sweeps
 
 def main():
@@ -131,7 +150,7 @@ def main():
 		stop = dc_sweeps[i%len(dc_sweeps)]['stop']
 		step = dc_sweeps[i%len(dc_sweeps)]['step']
 		node = sweep['node']
-		file_name = f"dc_sweep_{source_type}{source_name}_{(start)}-{stop}-{step}_V({node}).dat"
+		file_name = f"{source_type}{source_name}_{(start)}_{stop}_{step}_V({node}).dat"
 		file_path = os.path.join(dc_sweeps_dir, file_name)
 		with open(file_path, 'w') as f:
 			for data in sweep['data']:
@@ -139,4 +158,4 @@ def main():
 
 # Example usage
 if __name__ == "__main__":
-    main()
+	main()
