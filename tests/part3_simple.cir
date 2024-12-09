@@ -20,13 +20,13 @@ R8 4 0 10
 .DC V1 2 3 0.5
 * * .DC I2 2e-3 3e-3 1e-4
 * * .DC V2 2 4 0.5
-.print DC V(1)
+* .print DC V(1)
+* .print DC V(2)
+* .print DC V(3)
+* .print DC V(4)
+* .print DC V(5)
+* .print DC V(6)
+* .print DC V(7)
+* .print DC V(8)
+.PLOT DC V(2)
 .print DC V(2)
-.print DC V(3)
-.print DC V(4)
-.print DC V(5)
-.print DC V(6)
-.print DC V(7)
-.print DC V(8)
-* .print DC V(2)
-* .print DC V(2)

@@ -9,22 +9,22 @@
 #include "solver.h"
 
 namespace spic {
-	void Solver::LU_integrated_decompose()
+	bool Solver::LU_integrated_decompose()
 	{
-		logger.log(INFO, "LU_integrated_decompose called.");
+		logger.log(INFO, "LU_integrated_decompose: called.");
 		// TODO: How to check if LU was successfull
+		// A matrix here is considered to be invertble and
+		// and to check that Eigen allows to use .isInvertible() method
+		// but only in FullPivLU. So we assume that the cirtuit matrices are invertible?
 		lu = new Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>>(system.A);
-		// lu = new Eigen::FullPivLU<Eigen::MatrixXd>(system.A);
+		return true;
 	}
 
 	void Solver::LU_integrated_solve(Eigen::VectorXd &b)
 	{
-		// logger.log(INFO, "LU_integrated_solve called.");
-		// int rank = lu->rank();
-		// if (rank != system.n) {
-		// 	logger.log(ERROR, "Rank of MNA is " + std::to_string(rank) + " which is not equal to dimension " + std::to_string(system.n));
-		// 	logger.log(ERROR, "The system does not have a unique solution");
-		// }
+		if (!successful_decomposition || !lu) {
+			logger.log(ERROR, "LU_integrated_solve(): called without a decomposition.");
+		}
 		system.x = lu->solve(b);
 	}
 
@@ -33,7 +33,7 @@ namespace spic {
 		logger.log(INFO, "cholesky_integrated_decompose called.");
 		cholesky = new Eigen::LLT<Eigen::Ref<Eigen::MatrixXd>>(system.A);
 		if (cholesky->info() != Eigen::Success) {
-			logger.log(WARNING, "Cholesky decomposition failed, MNA System is not SPD.");
+			logger.log(WARNING, "cholesky_integrated_decomposition(): failed, MNA System is not SPD.");
 			return false;
 		}
 		return true;
@@ -41,18 +41,20 @@ namespace spic {
 
 	void Solver::cholesky_integrated_solve(Eigen::VectorXd &b)
 	{
-		// logger.log(INFO, "cholesky_integrated_solve called.");
+		if (!successful_decomposition || cholesky->info() != Eigen::Success) {
+			logger.log(ERROR, "cholesky_integrated_solve(): called without a successful decomposition.");
+			return;
+		}
 		system.x = cholesky->solve(b);
 	}
 
 
 	bool Solver::LU_custom_decompose()
 	{
-		logger.log(INFO, "LU_custom_decompose called.");
+		logger.log(INFO, "LU_custom_decompose(): called.");
 
 		// Initialize permutation vector
 		perm = new Eigen::VectorXi(system.n);
-		// perm = Eigen::VectorXi::LinSpaced(system.n, 0, system.n - 1);
 
 		// Initialize permutation vector
 		for (int i = 0; i < system.n; i++) {
@@ -79,7 +81,7 @@ namespace spic {
 
 			// Check for singular matrix
 			if (system.A(k, k) == 0) {
-				logger.log(ERROR, "Singular matrix in LU, cannot proceed.");
+				logger.log(ERROR, "LU_custom_decompose(): Singular matrix in LU, cannot proceed.");
 				return false;
 			}
 
@@ -100,6 +102,10 @@ namespace spic {
 
 	void Solver::LU_custom_solve(Eigen::VectorXd &b)
 	{
+		if (!successful_decomposition || !perm) {
+			logger.log(ERROR, "LU_custom_solve(): called without a successful decomposition.");
+			return;
+		}
 		Eigen::VectorXd y(system.n); // Temporary vector for solving Ly = b
 
 		// Forward substitution
@@ -123,18 +129,25 @@ namespace spic {
 
 	bool Solver::cholesky_custom_decompose()
 	{
-		logger.log(INFO, "cholesky_custom_decompose called.");
+		logger.log(INFO, "cholesky_custom_decompose(): called.");
 		Eigen::MatrixXd &A = system.A;
 		double squaredElement;
 		
 		for (int k = 0; k < system.n; k++) {
 			squaredElement = A(k,k) - A.row(k).head(k).squaredNorm();
 			if (squaredElement < 0) {
-				logger.log(ERROR, "Cholesky decomposition failed, MNA System is not SPD.");
+				logger.log(ERROR, "cholesky_custom_decompose(): failed, MNA System is not SPD.");
 				return false;
 			}
 
 			A(k,k) = std::sqrt(squaredElement);
+
+			// Check for singular matrix
+			if (A(k, k) == 0) {
+				logger.log(ERROR, "cholesky_custom_decompose(): Singular matrix in cholesky, cannot proceed.");
+				return false;
+			}
+
 			for (int i = k + 1; i < system.n; i++) {
 				A(i,k) = (A(i,k) - A.row(i).head(k).dot(A.row(k).head(k))) / A(k,k);
 				A(k,i) = A(i,k);
@@ -146,6 +159,10 @@ namespace spic {
 
 	void Solver::cholesky_custom_solve(Eigen::VectorXd &b)
 	{
+		if (!successful_decomposition) {
+			logger.log(ERROR, "cholesky_custom_solve(): called without a successful decomposition.");
+			return;
+		}
 		Eigen::VectorXd y(system.n); // Temporary vector for solving Ly = b
 
 		// Forward substitution
@@ -187,16 +204,15 @@ namespace spic {
 			}
 		case LU:
 			if (custom) {
-				LU_custom_decompose();
+				res = LU_custom_decompose();
 			} else {
-				LU_integrated_decompose();
+				res = LU_integrated_decompose();
 			}
-			break;
-		default:
 			break;
 		}
 
-		return true;
+		successful_decomposition = res;
+		return res;
 	}
 
 	void Solver::solve(Eigen::VectorXd &b)
@@ -216,9 +232,6 @@ namespace spic {
 			} else {
 				LU_integrated_solve(b);
 			}
-			break;
-
-		default:
 			break;
 		}
 	}

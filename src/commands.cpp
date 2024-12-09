@@ -3,11 +3,13 @@
 #include <string>
 #include <filesystem>
 #include <cstdio>
+#include <set>
 
 #include "commands.h"
 #include "netlist.h"
 #include "node_table.h"
 #include "system.h"
+#include "util.h"
 
 namespace spic {
 	// Commands::add_v_dc_sweep function creates a new dc_sweep for a voltage source
@@ -60,6 +62,13 @@ namespace spic {
 		int voltage_src_id, matrix_src_id, current_src_id, current_pos_node, current_neg_node;
 		double current_src_value;
 
+		// Create a set to store unique elements from prints and plots
+		std::set<std::string> unique_elements(prints.begin(), prints.end());
+		unique_elements.insert(plots.begin(), plots.end());
+
+		// Convert the set back to a vector
+		std::vector<std::string> unique_vector(unique_elements.begin(), unique_elements.end());
+
 		// Create updated version of b with the DC Sweep initial parameters
 		if (type == V) {
 			voltage_src_id = netlist.voltage_sources.find_element_name(source_name);
@@ -90,7 +99,7 @@ namespace spic {
 
 		// Init vector of vectors
 		std::unordered_map<std::string, std::vector<double>> dc_sweep_data;
-		for (auto &print_node : prints) {
+		for (auto &print_node : unique_vector) {
 			dc_sweep_data[print_node] = std::vector<double>();
 		}
 		std::vector<double> dc_sweep_src;
@@ -108,7 +117,7 @@ namespace spic {
 
 			// Solve the system and keep the results for the print nodes
 			solver.solve(b_new);
-			for (auto &print_node : prints) {
+			for (auto &print_node : unique_vector) {
 				int node_id = node_table.find_node(&print_node) - 1;
 				dc_sweep_data[print_node].push_back(solver.system.x(node_id));
 			}
@@ -129,12 +138,22 @@ namespace spic {
 
 		// Write the DC Sweep results to files
 		std::ofstream file;
-		for (auto &print_node : prints) {
+		for (auto &print_node : unique_vector) {
 			file.open(commands.dc_sweeps_dir/get_dc_sweep_name(print_node));
 			for (int i = 0; i < dc_sweep_src.size(); i++) {
 				file << dc_sweep_src[i] << " " << dc_sweep_data[print_node][i] << std::endl;
 			}
 			file.close();
+		}
+
+		// Use gnuplot to plot the DC Sweep results for the plot nodes
+		for (auto &plot_node : plots) {
+			std::string plot_file = commands.dc_sweeps_dir/get_dc_sweep_name(plot_node);
+			std::string image_file = plot_file;
+			image_file.erase(plot_file.find(".dat"), std::string::npos);
+			std::string plot_command = "gnuplot -e \"set terminal png; set output '" + image_file + ".png'; plot '" + plot_file + "' with lines title 'V(" + plot_node + ") vs " + source_name + "\"";
+			solver.logger.log(INFO, plot_command);
+			std::system(plot_command.c_str());
 		}
 	}
 
