@@ -59,6 +59,8 @@
 %token	T_OPTIONS	".OPTIONS"
 %token	T_SPD		"MNA static matrix is SPD"
 %token	T_CUSTOM	"MNA system should be solved with custom solver"
+%token	T_ITER		"MNA system should be solved with iterative method"
+%token	T_ITOL		"MNA sytem should be solved with defined tolerance when using iterative methods"
 %token	T_DC		".DC"
 %token	T_PRINT		".PRINT"
 %token	T_PLOT		".PLOT"
@@ -136,8 +138,12 @@ command: T_OPTIONS options
 
 options: options T_SPD { commands.options.spd = true; }
 		| options T_CUSTOM { commands.options.custom = true; }
+		| options T_ITER { commands.options.iter = true; }
+		| options T_ITOL T_FLOAT { commands.options.itol = $3; }
 		| T_SPD { commands.options.spd = true; }
 		| T_CUSTOM { commands.options.custom = true; }
+		| T_ITER { commands.options.iter = true; }
+		| T_ITOL T_FLOAT { commands.options.itol = $2; }
 
 v_nodes: v_nodes T_VNODE { add_node_to_list($2); delete $2; }
 	| T_VNODE { add_node_to_list($1); delete $1; }

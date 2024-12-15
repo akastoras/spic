@@ -5,6 +5,45 @@ import os
 import re
 import shutil
 
+# Adds the .OP and DC keywords so that the .cir is ngspice compatible
+def modify_cir_file(cir_file, output_dir):
+	# Copy the .cir file to the output directory
+	copied_file_path = os.path.join(output_dir, os.path.basename(cir_file))
+	shutil.copy(cir_file, copied_file_path)
+
+	# Read the copied file and modify its content
+	with open(copied_file_path, 'r') as file:
+		lines = file.readlines()
+
+	modified_lines = []
+	op_line_added = False
+	op_present = any('.OP' in line.upper() for line in lines)
+
+	for line in lines:
+		if not op_present and not op_line_added and line.strip().upper().startswith('.DC'):
+			modified_lines.append('.OP\n')
+			op_line_added = True
+
+		line = line.upper()
+		if line.strip().startswith('.PLOT'):
+			line = line.replace('.PLOT', '.PRINT', 1)
+			parts = line.split()
+			if 'DC' not in parts:
+				parts.insert(1, 'DC')
+			modified_lines.append(' '.join(parts) + '\n')
+		elif line.strip().startswith('.PRINT'):
+			parts = line.split()
+			if 'DC' not in parts:
+				parts.insert(1, 'DC')
+			modified_lines.append(' '.join(parts) + '\n')
+		else:
+			modified_lines.append(line)
+
+	# Write the modified content back to the copied file
+	with open(copied_file_path, 'w') as file:
+		file.writelines(modified_lines)
+	return copied_file_path
+
 def run_ngspice(cir_file, out_file):
 	# Run ngspice with the specified .cir file
 	result = subprocess.run(['ngspice', '-b', '-o', out_file, cir_file], capture_output=True, text=True)
@@ -120,8 +159,11 @@ def main():
 	# Create output directory if it doesn't exist
 	os.makedirs(output_dir, exist_ok=False)
 
+	# Copy the .cir file to the output directory
+	ngspice_cir_file = modify_cir_file(cir_file, output_dir)
+
 	# Run ngspice and parse the output
-	solution = run_ngspice(cir_file, ngspice_out_file)
+	solution = run_ngspice(ngspice_cir_file, ngspice_out_file)
 
 	# Create dc_op.txt file
 	dc_op_file = os.path.join(output_dir, "dc_op.dat")
@@ -129,11 +171,8 @@ def main():
 		for node_name, value in solution:
 			f.write(f"{node_name} {value}\n")
 
-	# Copy the .cir file to the output directory
-	shutil.copy(cir_file, os.path.join(output_dir, os.path.basename(cir_file)))
-
 	# Parse the .cir file for DC sweeps
-	dc_sweeps = parse_dc_sweeps(cir_file)
+	dc_sweeps = parse_dc_sweeps(ngspice_cir_file)
 
 	# Parse the ngspice output file for sweep data
 	sweeps = parse_spice_output(ngspice_out_file)

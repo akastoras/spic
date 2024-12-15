@@ -3,6 +3,8 @@
 #include <Eigen/Cholesky>
 #include <iostream>
 
+#include <omp.h>
+
 #include "system.h"
 #include "commands.h"
 #include "util.h"
@@ -187,6 +189,7 @@ namespace spic {
 	// Functions
 	bool Solver::decompose()
 	{
+		double start = omp_get_wtime();
 		bool res;
 
 		switch (method)
@@ -212,11 +215,15 @@ namespace spic {
 		}
 
 		successful_decomposition = res;
+		perf_counter.secs_in_decompose_calls += omp_get_wtime() - start;
+		perf_counter.decompose_calls++;
 		return res;
 	}
 
 	void Solver::solve(Eigen::VectorXd &b)
 	{
+		double start = omp_get_wtime();
+
 		switch (method)
 		{
 		case CHOLESKY:
@@ -234,5 +241,20 @@ namespace spic {
 			}
 			break;
 		}
+
+		perf_counter.secs_in_solve_calls += omp_get_wtime() - start;
+		perf_counter.solve_calls++;
+	}
+
+	/* Dump performance counters to a file */
+	void Solver::dump_perf_counters(std::filesystem::path &filename)
+	{
+		std::ofstream file(filename.string(), std::ofstream::out);
+		file << "secs_in_decompose: " << perf_counter.secs_in_decompose_calls << std::endl;
+		file << "secs_in_solve: " << perf_counter.secs_in_solve_calls << std::endl;
+		file << "decompose_calls: " << perf_counter.decompose_calls << std::endl;
+		file << "solve_calls: " << perf_counter.solve_calls << std::endl;
+		file.close();
 	}
 }
+

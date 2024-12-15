@@ -1,6 +1,6 @@
 * SPICE netlist of Part1-Parser.pdf
 
-V1 5 0 3
+V1 5 0 2
 V2 3 2 0.2
 V3 7 6 2
 I1 4 8 1e-3
@@ -14,18 +14,5 @@ R6 3 4 0.1
 R7 8 0 1e3
 R8 4 0 10
 
-.op
-* .OPTIONS CUSTOM
-.DC V1 2 3 0.1
-* * .DC I2 2e-3 3e-3 1e-4
-* * .DC V2 2 4 0.5
-* .print DC V(1)
-* .print DC V(2)
-* .print DC V(3)
-* .print DC V(4)
-* .print DC V(5)
-* .print DC V(6)
-* .print DC V(7)
-* .print DC V(8)
-* .PLOT DC V(2)
-.print DC V(2)
+.DC V1 0 3 0.01
+.PLOT V(4)

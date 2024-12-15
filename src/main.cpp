@@ -7,6 +7,8 @@
 
 #include <boost/program_options.hpp>
 
+#include <omp.h>
+
 #include "parser.h"
 #include "lexer.h"
 
@@ -30,7 +32,8 @@ void parse_arguments(po::variables_map &vm, int argc, char** argv);
 void parse_spice_file(std::filesystem::path cir_file, Logger &logger);
 void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 	const std::filesystem::path &output_dir, const std::string &output_dir_str,
-	const std::filesystem::path &cir_file, const std::string &cir_file_str, Logger &logger);
+	const std::filesystem::path &cir_file, const std::string &cir_file_str,
+	bool bypass_options, Logger &logger);
 
 int main(int argc, char** argv)
 {
@@ -42,7 +45,7 @@ int main(int argc, char** argv)
 	// Define the supported options
 	po::variables_map vm;
 	parse_arguments(vm, argc, argv);
-	
+
 	std::string cir_file_str = vm["cir_file"].as<std::string>();
 	std::string output_dir_str = vm["output_dir"].as<std::string>();
 	std::filesystem::path cir_file(cir_file_str);
@@ -51,6 +54,19 @@ int main(int argc, char** argv)
 	// Parse the spice circuit file that constructs the netlist
 	// the node_table and the commands structures
 	parse_spice_file(cir_file, logger);
+
+	// Check if the user want to bypass the .cir options from spic
+	bool bypass_options = vm["bypass_options"].as<bool>();
+	if (bypass_options) {
+		logger.log(INFO, "Bypassing .OPTIONS");
+		commands.options.spd = vm["spd"].as<bool>();
+		commands.options.custom = vm["custom"].as<bool>();
+		commands.options.iter = vm["iter"].as<bool>();
+		commands.options.itol = vm["itol"].as<double>();
+	}
+
+	// Show final commands
+	std::cout << commands;
 
 	// Initialize Parallelism in Eigen
 	int max_threads = omp_get_max_threads();
@@ -67,11 +83,15 @@ int main(int argc, char** argv)
 
 	// Solve on the operating point
 	solve_operating_point(slv, system, output_dir, output_dir_str,
-									cir_file, cir_file_str, logger);
+						cir_file, cir_file_str, bypass_options, logger);
 
 	// Perform the dc sweeps (if there are any)
 	commands.dc_sweeps_dir = output_dir/"dc_sweeps";
 	commands.perform_dc_sweeps(slv, logger);
+
+	logger.log(INFO, "Dumping performance report.");
+	std::filesystem::path perf_rpt = output_dir/"spic_performance.rpt";
+	slv.dump_perf_counters(perf_rpt);
 
 	logger.log(INFO, "Simulator finished. Exiting...");
 	return 0;
@@ -85,7 +105,12 @@ void parse_arguments(po::variables_map &vm, int argc, char **argv) {
 		("help", "produce help message")
 		("cir_file", po::value<std::string>(), "Path to the circuit file")
 		("output_dir", po::value<std::string>()->default_value(""),
-							"Output directory (default: <filename>_golden)");
+							"Output directory (default: <filename>_golden)")
+		("bypass_options", po::bool_switch()->default_value(false), "Bypass .cir file options")
+		("spd", po::bool_switch()->default_value(false), "Enable SPD option")
+		("custom", po::bool_switch()->default_value(false), "Enable custom solver option")
+		("iter", po::bool_switch()->default_value(false), "Enable iterative solver option")
+		("itol", po::value<double>()->default_value(1e-3), "Set iteration tolerance");
 
 	try {
 		po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -132,13 +157,12 @@ void parse_spice_file(std::filesystem::path cir_file, Logger &logger) {
 	// Show the node table and the netlist
 	std::cout << node_table;
 	std::cout << netlist;
-	std::cout << commands;
 }
 
 void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 	const std::filesystem::path &output_dir, const std::string &output_dir_str,
 	const std::filesystem::path &cir_file, const std::string &cir_file_str,
-	Logger &logger)
+	bool bypass_options, Logger &logger)
 {
 	// Keep a copy of the MNA matrix to check the residual
 	Eigen::MatrixXd A_cpy = system.A;
@@ -166,7 +190,45 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 
 	// Copy the circuit file used to the output directory
 	logger.log(INFO, "Copying " + cir_file_str +  " file to " + output_dir_str);
-	std::filesystem::copy(cir_file, output_dir);
+	
+	if (!bypass_options) {
+		std::filesystem::copy(cir_file, output_dir);
+	} else {
+		// Get all lines apart from the .OPTIONS lines
+		std::ifstream input_file(cir_file);
+		if (!input_file.is_open()) {
+			throw std::runtime_error("Unable to open file: " + cir_file_str);
+		}
+
+		std::vector<std::string> lines;
+		std::string line;
+		while (std::getline(input_file, line)) {
+			if (line.find(".OPTIONS") == std::string::npos) {
+				lines.push_back(line);
+			}
+		}
+		input_file.close();
+
+		// Write the modified content to a new file in the output directory
+		std::filesystem::path new_cir_file = output_dir / cir_file.filename();
+		std::ofstream out_file(new_cir_file);
+		if (!out_file.is_open()) {
+			throw std::runtime_error("Unable to open file for writing: " + new_cir_file.string());
+		}
+
+		for (const auto& line : lines) {
+			out_file << line << std::endl;
+		}
+
+		// Append the user's options to the end of the new file
+		std::string user_options = std::string(".OPTIONS")
+								+ std::string((commands.options.spd ? " SPD" : ""))
+								+ std::string(commands.options.custom ? " CUSTOM" : "")
+								+ std::string(commands.options.iter ? " ITER" : "")
+								+ std::string(" ITOL=") + std::to_string(commands.options.itol);
+		out_file << user_options << std::endl;
+		out_file.close();
+	}
 
 	// Create the dc_op.dat file in the output directory
 	std::ofstream file;

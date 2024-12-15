@@ -14,7 +14,9 @@
 namespace spic {
 	typedef struct {
 		bool custom; // Enable usage of custom implementations
-		bool spd; // Enable cholesky decomp
+		bool spd; // If iter=false: Enable cholesky decomp, else: Enable conjugate gradient
+		bool iter; // Enables iterative methods (conjugate gradient & biconjugate gradient)
+		double itol; // The convergence threshold for iterative methods
 	} options_t;
 
 	class DCSweep {

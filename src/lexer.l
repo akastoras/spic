@@ -93,6 +93,10 @@ FLOAT		{FLOAT1}|{FLOAT2}
 
 "SPD"				{ return print_token(T_SPD); }
 "CUSTOM"			{ return print_token(T_CUSTOM); }
+"ITER"				{ return print_token(T_ITER); }
+"ITOL="				{ return print_token(T_ITOL); }
+
+{FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
@@ -210,6 +214,10 @@ int print_token(int token)
 		std::cout << "Found Print Command\n";
 	} else if (token == T_VNODE) {
 		std::cout << "Found Voltage at Node " << *yylval.strval << "\n";
+	} else if (token == T_ITER) {
+		std::cout << "Found Iterative Method Command\n";
+	} else if (token == T_ITOL) {
+		std::cout << "Found Iteration Tolerance\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

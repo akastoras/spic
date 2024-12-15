@@ -180,7 +180,9 @@ namespace spic {
 
 std::ostream& operator<<(std::ostream &out, const spic::options_t &options) {
 	out << "\tCustom: " << (options.custom ? "Enabled" : "Disabled") << std::endl;
-	out << "\tSPD: " << (options.spd ? "Enabled" : "Disabled") << std::endl;
+	out << "\tSPD: "  << (options.spd ? "Enabled" : "Disabled") << std::endl;
+	out << "\tIter: " << (options.iter ? "Enabled" : "Disabled") << std::endl;
+	out << "\tItol: " << options.itol << std::endl;
 	return out;
 }
 
