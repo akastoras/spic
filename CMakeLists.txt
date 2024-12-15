@@ -16,7 +16,8 @@ add_subdirectory(${EIGEN3_INCLUDE_DIR} ${CMAKE_BINARY_DIR}/eigen_build)
 find_package(FLEX 2.6 REQUIRED)
 find_package(BISON 3.0 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS program_options)
-find_package(OpenMP REQUIRED)
+find_package(OpenMP)
+find_package(MKL CONFIG)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(include)
@@ -32,10 +33,27 @@ file(GLOB SRC_FILES "${SRC_DIR}/*.cpp")
 add_executable(spic ${SRC_FILES} "${LEXER_OUT}" "${PARSER_OUT}")
 
 target_include_directories(spic PRIVATE "${BUILD_DIR}")
-if(OpenMP_CXX_FOUND)
-target_link_libraries(spic PUBLIC Eigen3::Eigen ${Boost_LIBRARIES} OpenMP::OpenMP_CXX)
+if((OpenMP_CXX_FOUND) AND (MKL_FOUND))
+message("Linking both OpenMP and MKL")
+target_link_libraries(spic PUBLIC 	Eigen3::Eigen
+									${Boost_LIBRARIES}
+									OpenMP::OpenMP_CXX
+									$<LINK_ONLY:MKL::MKL>
+									)
+elseif(OpenMP_CXX_FOUND)
+target_link_libraries(spic PUBLIC 	Eigen3::Eigen
+									${Boost_LIBRARIES}
+									OpenMP::OpenMP_CXX
+									)
 else()
-target_link_libraries(spic PUBLIC Eigen3::Eigen ${Boost_LIBRARIES})
+target_link_libraries(spic PUBLIC	Eigen3::Eigen
+									${Boost_LIBRARIES})
+endif()
+
+if (MKL_FOUND)
+target_compile_options(spic PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS>)
+target_include_directories(spic PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES>)
+add_compile_definitions(EIGEN_USE_MKL_ALL)
 endif()
 
 

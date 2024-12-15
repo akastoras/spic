@@ -54,8 +54,8 @@ int main(int argc, char** argv)
 
 	// Initialize Parallelism in Eigen
 	int max_threads = omp_get_max_threads();
-	logger.log(INFO, "Using " + std::to_string(max_threads));
-	Eigen::setNbThreads(omp_get_max_threads(max_threads));
+	logger.log(INFO, "Using " + std::to_string(max_threads) + " threads.");
+	Eigen::setNbThreads(max_threads);
 
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");

@@ -15,8 +15,7 @@ R7 8 0 1e3
 R8 4 0 10
 
 .op
-* .OPTIONS SPD
-.OPTIONS CUSTOM
+* .OPTIONS CUSTOM
 .DC V1 2 3 0.1
 * * .DC I2 2e-3 3e-3 1e-4
 * * .DC V2 2 4 0.5
@@ -28,5 +27,5 @@ R8 4 0 10
 * .print DC V(6)
 * .print DC V(7)
 * .print DC V(8)
-.PLOT DC V(2)
+* .PLOT DC V(2)
 .print DC V(2)
