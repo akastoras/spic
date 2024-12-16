@@ -12,13 +12,6 @@
 
 
 namespace spic {
-	typedef struct {
-		bool custom; // Enable usage of custom implementations
-		bool spd; // If iter=false: Enable cholesky decomp, else: Enable conjugate gradient
-		bool iter; // Enables iterative methods (conjugate gradient & biconjugate gradient)
-		double itol; // The convergence threshold for iterative methods
-	} options_t;
-
 	class DCSweep {
 		public:
 		using type_t = enum {V,I};
@@ -52,7 +45,6 @@ namespace spic {
 	};
 }
 
-std::ostream& operator<<(std::ostream &out, const spic::options_t &options);
 std::ostream& operator<<(std::ostream &out, const spic::DCSweep dc_sweep);
 std::ostream& operator<<(std::ostream &out, const std::vector<spic::DCSweep> dc_sweeps);
 std::ostream& operator<<(std::ostream &out, const spic::Commands &commands);

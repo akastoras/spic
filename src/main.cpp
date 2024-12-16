@@ -1,7 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include <unordered_map>
-#include <sstream> 
+#include <sstream>
 
 #include <Eigen/Core>
 
@@ -37,7 +37,6 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 
 int main(int argc, char** argv)
 {
-	// TODO: Count and log execution time of decomosition
 	// and average of solve. Also the parsing and the MNA construction
 	// Print all times and a total timer at the end of the program
 	Logger logger = Logger(std::cout);
@@ -78,8 +77,7 @@ int main(int argc, char** argv)
 	spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
 
 	// Construct a Solver object
-	spic::Solver slv = spic::Solver(system, commands.options.spd,
-									commands.options.custom, logger);
+	spic::Solver slv = spic::Solver(system, commands.options, logger);
 
 	// Solve on the operating point
 	solve_operating_point(slv, system, output_dir, output_dir_str,
@@ -164,21 +162,8 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 	const std::filesystem::path &cir_file, const std::string &cir_file_str,
 	bool bypass_options, Logger &logger)
 {
-	// Keep a copy of the MNA matrix to check the residual
-	Eigen::MatrixXd A_cpy = system.A;
-
-	// SOlve MNA system on the operating point
-	if (!slv.decompose()) {
-		logger.log(ERROR, "Exiting due to non-SPD MNA system");
-		exit(EXIT_FAILURE);
-	}
+	// Solve MNA system on the operating point
 	slv.solve(system.b);
-
-	/*TODO: Since we keep a copy for the residual maybe we should do it internally
-	 * and use it for making decompose perform LU after failed cholesky
-	 * (maybe also consider out of place)
-	 */
-	logger.log(INFO, "Residual: " + std::to_string((A_cpy*system.x - system.b).norm()));
 
 	// Delete output_dir if it exists and then create it again
 	if (std::filesystem::exists(output_dir)) {

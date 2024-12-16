@@ -1,6 +1,7 @@
 #include <cmath>
 #include <Eigen/LU>
 #include <Eigen/Cholesky>
+#include <Eigen/IterativeLinearSolvers>
 #include <iostream>
 
 #include <omp.h>
@@ -128,13 +129,13 @@ namespace spic {
 		}
 	}
 
-
+	// TODO: Store only the L matrix since U = L^T
 	bool Solver::cholesky_custom_decompose()
 	{
 		logger.log(INFO, "cholesky_custom_decompose(): called.");
 		Eigen::MatrixXd &A = system.A;
 		double squaredElement;
-		
+
 		for (int k = 0; k < system.n; k++) {
 			squaredElement = A(k,k) - A.row(k).head(k).squaredNorm();
 			if (squaredElement < 0) {
@@ -186,6 +187,36 @@ namespace spic {
 		}
 	}
 
+	bool Solver::CG_integrated_solve(Eigen::VectorXd &b)
+	{
+		logger.log(INFO, "CG_integrated_solve(): called.");
+		// Eigen::ConjugateGradient<Eigen::Ref<Eigen::MatrixXd>, Eigen::Lower|Eigen::Upper> cg;
+		// cg.compute(system.A);
+		// system.x = cg.solve(b);
+		// return cg.info() == Eigen::Success;
+		return false;
+	}
+
+	void Solver::CG_custom_solve(Eigen::VectorXd &b)
+	{
+		return;
+	}
+
+	bool Solver::BiCG_integrated_solve(Eigen::VectorXd &b)
+	{
+		logger.log(INFO, "BiCG_integrated_solve(): called.");
+		// Eigen::BiCGSTAB<Eigen::Ref<Eigen::MatrixXd>> bicg;
+		// bicg.compute(system.A);
+		// system.x = bicg.solve(b);
+		// return bicg.info() == Eigen::Success;
+		return false;
+	}
+
+	void Solver::BiCG_custom_solve(Eigen::VectorXd &b)
+	{
+		return;
+	}
+
 	// Functions
 	bool Solver::decompose()
 	{
@@ -195,7 +226,7 @@ namespace spic {
 		switch (method)
 		{
 		case CHOLESKY:
-			if (custom) {
+			if (options.custom) {
 				res = cholesky_custom_decompose();
 			} else {
 				res = cholesky_integrated_decompose();
@@ -206,7 +237,7 @@ namespace spic {
 				break;
 			}
 		case LU:
-			if (custom) {
+			if (options.custom) {
 				res = LU_custom_decompose();
 			} else {
 				res = LU_integrated_decompose();
@@ -227,19 +258,31 @@ namespace spic {
 		switch (method)
 		{
 		case CHOLESKY:
-			if (custom) {
+			if (options.custom) {
 				cholesky_custom_solve(b);
 			} else {
 				cholesky_integrated_solve(b);
 			}
 			break;
 		case LU:
-			if (custom) {
+			if (options.custom) {
 				LU_custom_solve(b);
 			} else {
 				LU_integrated_solve(b);
 			}
 			break;
+		case CG:
+			if (options.custom) {
+				CG_custom_solve(b);
+			} else {
+				CG_integrated_solve(b);
+			}
+		case BiCG:
+			if (options.custom) {
+				BiCG_custom_solve(b);
+			} else {
+				BiCG_integrated_solve(b);
+			}
 		}
 
 		perf_counter.secs_in_solve_calls += omp_get_wtime() - start;
@@ -258,3 +301,10 @@ namespace spic {
 	}
 }
 
+std::ostream& operator<<(std::ostream &out, const spic::options_t &options) {
+	out << "\tCustom: " << (options.custom ? "Enabled" : "Disabled") << std::endl;
+	out << "\tSPD: "  << (options.spd ? "Enabled" : "Disabled") << std::endl;
+	out << "\tIter: " << (options.iter ? "Enabled" : "Disabled") << std::endl;
+	out << "\tItol: " << options.itol << std::endl;
+	return out;
+}

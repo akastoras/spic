@@ -4,6 +4,7 @@ build/
 
 *.tab.*
 
+scripts/__pycache__
 
 *.o
 *.output

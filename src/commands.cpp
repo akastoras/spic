@@ -6,6 +6,7 @@
 #include <set>
 
 #include "commands.h"
+#include "solver.h"
 #include "netlist.h"
 #include "node_table.h"
 #include "system.h"
@@ -178,13 +179,6 @@ namespace spic {
 	}
 }
 
-std::ostream& operator<<(std::ostream &out, const spic::options_t &options) {
-	out << "\tCustom: " << (options.custom ? "Enabled" : "Disabled") << std::endl;
-	out << "\tSPD: "  << (options.spd ? "Enabled" : "Disabled") << std::endl;
-	out << "\tIter: " << (options.iter ? "Enabled" : "Disabled") << std::endl;
-	out << "\tItol: " << options.itol << std::endl;
-	return out;
-}
 
 std::ostream& operator<<(std::ostream &out, const spic::DCSweep dc_sweep) {
 	out << (dc_sweep.type == spic::DCSweep::V ? "V" : "I")  << dc_sweep.source_name << " "

@@ -16,6 +16,7 @@ import numpy as np
 import re
 import argparse
 import csv
+from prettytable import PrettyTable
 
 def read_dc_op_file(file_path):
 	with open(file_path, 'r') as file:
@@ -127,11 +128,18 @@ def main():
 	results = compare_directories(args.dir1, args.dir2)
 
 	# Write results to CSV
+	pt = PrettyTable()
 	with open(args.output_csv, 'w', newline='') as csvfile:
 		csvwriter = csv.writer(csvfile)
 		csvwriter.writerow(["File", "Max error", "Average error"])
-		for row in results:
-			csvwriter.writerow(row)
+		pt.field_names = ["File", "Max error", "Average error"]
+		for result in results:
+			csvwriter.writerow(result)
+			pt.add_row(result)
+	
+	with open(args.output_csv.replace(".csv", ".rpt"), 'w') as f:
+		f.write(str(pt))
+	
 
 if __name__ == "__main__":
 	main()

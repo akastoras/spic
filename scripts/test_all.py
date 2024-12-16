@@ -19,56 +19,84 @@ import sys
 import os
 import subprocess
 import argparse
+import csv
+from prettytable import PrettyTable
 
-def run_tests(tests_dir, version):
+from test_cir import get_version_name
+
+
+def run_tests(tests_dir, custom, iter_methods, itol, version_num):
 	# Compute average error for each test
 	tests = os.listdir(tests_dir)
 	for test in tests:
 		if test.endswith('.cir'):
+			params = []
+			if "30K" in test or "20K" in test or "10K" in test or "5K" in test:
+				continue
+
+			if "SPD" in test:
+				params.append("--spd")
+			if custom:
+				params.append("--custom")
+			if iter_methods:
+				params.append("--iter")
+				params.append(f"--itol={itol}")
+
 			test_path = os.path.join(tests_dir, test)
 			print('Running test', test_path)
 			script_dir = os.path.dirname(os.path.realpath(__file__))
 			test_cir = os.path.join(script_dir, "test_cir.py")
-			subprocess.run(['python3', test_cir, "--cir_file", test_path, "--version", version])
+			subprocess.run(['python3', test_cir, "--cir_file", test_path, "--version", version_num] + params)
 
-def read_csv_files(tests_dir):
+
+def read_csv_files(tests_dir, version):
 	# Read the csv files with the results of the tests
-	csv_files = os.listdir(os.path.join(tests_dir, "eval"))
-	results = {}
-	for csv_file in csv_files:
+	csv_dir = os.path.join(tests_dir, "eval", version)
+	results = []
 
+	for csv_file in os.listdir(csv_dir):
 		if csv_file.endswith('.csv'):
-			csv_file_path = os.path.join(tests_dir, "eval", csv_file)
+			csv_file_path = os.path.join(csv_dir, csv_file)
 			with open(csv_file_path, 'r') as f:
 				lines = f.readlines()
-				_, dc_op_max_error, dc_op_avg_error = line[1].strip().split(',')
-				_, dc_sweeps_max_error, dc_sweeps_avg_error = line[-1].strip().split(',')
-				results[csv_file] = {
+				_, dc_op_max_error, dc_op_avg_error = lines[1].strip().split(',')
+				_, dc_sweeps_max_error, dc_sweeps_avg_error = lines[-1].strip().split(',')
+				results.append({
+					'test': csv_file,
 					'dc_op_max_error': dc_op_max_error,
 					'dc_op_avg_error': dc_op_avg_error,
 					'dc_sweeps_max_error': dc_sweeps_max_error,
 					'dc_sweeps_avg_error': dc_sweeps_avg_error
-				}
+				})
 	return results
 
 def main():
 	parser = argparse.ArgumentParser(description='Run all tests in a directory')
 	parser.add_argument('tests_dir', help='Directory containing tests')
-	parser.add_argument("--version", help="Version of evaluation", default="spic")
+	parser.add_argument('--custom', action='store_true', help='Directory containing tests')
+	parser.add_argument('--iter', action='store_true', help='Directory containing tests')
+	parser.add_argument('--itol', help='Tolerance for iterative solver', default='1e-3')
+	parser.add_argument("--version", help="Version of evaluation", default="0")
 
 	args = parser.parse_args()
 	tests_dir = args.tests_dir
-	version = args.version
+	version_str = get_version_name(args.custom, args.iter, args.itol, args.version)
 
-	run_tests(tests_dir, version)
-	results = read_csv_files(tests_dir)
+	run_tests(tests_dir, args.custom, args.iter, args.itol, args.version)
+	results = read_csv_files(tests_dir, version_str)
 
 	# Write results to CSV
-	with open(s.path.join(tests_dir, "eval", version + ".csv"), 'w', newline='') as csvfile:
+	pt = PrettyTable()
+	with open(os.path.join(tests_dir, "eval", version_str + ".csv"), 'w', newline='') as csvfile:
 		csvwriter = csv.writer(csvfile)
 		csvwriter.writerow(["Test", "DC OP Max error", "DC OP Average error", "DC Sweeps Max error","DC Sweeps Average error"])
-		for row in results:
-			csvwriter.writerow(row)
+		pt.field_names = ["Test", "DC OP Max error", "DC OP Average error", "DC Sweeps Max error","DC Sweeps Average error"]
+		for result in results:
+			csvwriter.writerow(result.values())
+			pt.add_row(result.values())
+
+	with open(os.path.join(tests_dir, "eval", version_str + ".rpt"), 'w') as f:
+		f.write(str(pt))
 
 if __name__ == '__main__':
 	main()

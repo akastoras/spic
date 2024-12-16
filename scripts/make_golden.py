@@ -67,11 +67,12 @@ def run_ngspice(cir_file, out_file):
 		line = line.split()
 		if len(line) == 2:
 			if line[0] == "Node" and line[1] == "Voltage":
-				first_line = i + 3
+				voltage_start = i + 3
 			if line[0] == "Source" and line[1] == "Current":
-				end_line = i - 1
-				
-	for line in lines[first_line:end_line]:
+				voltage_end = i - 1
+				source_start = i + 3
+
+	for line in lines[voltage_start:voltage_end]:
 		line = line.upper().strip()
 		parts = line.split()
 		node_name = parts[0]
@@ -79,6 +80,15 @@ def run_ngspice(cir_file, out_file):
 		if node_name.startswith('V('):
 			node_name = node_name[2:-1]
 		solution.append((node_name, value))
+
+	# for line in lines[source_start:]:
+	# 	line = line.upper().strip()
+	# 	parts = line.split()
+	# 	left_part = parts[0]
+	# 	value = parts[1]
+	# 	if re.match(r'V\d+#BRANCH', left_part):
+	# 		node_name = node_name[2:-1]
+	# 	solution.append((node_name, value))
 
 	return solution
 
