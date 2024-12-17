@@ -59,7 +59,8 @@ def run_ngspice(cir_file, out_file):
 
 	# Extract the values from the ngspice output
 	# The worst code you will ever see. Here it comes:
-	solution = []
+	solution_v = []
+	solution_i = []
 	first_line = 0
 	end_line = 0
 	for i, line in enumerate(lines):
@@ -79,18 +80,22 @@ def run_ngspice(cir_file, out_file):
 		value = parts[1]
 		if node_name.startswith('V('):
 			node_name = node_name[2:-1]
-		solution.append((node_name, value))
+		solution_v.append((node_name, value))
 
-	# for line in lines[source_start:]:
-	# 	line = line.upper().strip()
-	# 	parts = line.split()
-	# 	left_part = parts[0]
-	# 	value = parts[1]
-	# 	if re.match(r'V\d+#BRANCH', left_part):
-	# 		node_name = node_name[2:-1]
-	# 	solution.append((node_name, value))
+	for line in lines[source_start:]:
+		line = line.upper().strip()
+		print(line)
+		pattern = re.compile(r'(\S+)#BRANCH\s+(\S+)')
+		match = pattern.match(line)
+		if match:
+			branch_name = match.group(1)
+			value = match.group(2)
+			print(branch_name, value)
+		else:
+			break
+		solution_i.append((branch_name, value))
 
-	return solution
+	return solution_v, solution_i
 
 def parse_dc_sweeps(file_path):
 	dc_sweeps = []
@@ -173,13 +178,17 @@ def main():
 	ngspice_cir_file = modify_cir_file(cir_file, output_dir)
 
 	# Run ngspice and parse the output
-	solution = run_ngspice(ngspice_cir_file, ngspice_out_file)
+	solution_v, solution_i = run_ngspice(ngspice_cir_file, ngspice_out_file)
 
 	# Create dc_op.txt file
 	dc_op_file = os.path.join(output_dir, "dc_op.dat")
 	with open(dc_op_file, 'w') as f:
-		for node_name, value in solution:
+		f.write("Node Voltage\n")
+		for node_name, value in solution_v:
 			f.write(f"{node_name} {value}\n")
+		f.write("\nSource Current\n")
+		for source_name, value in solution_i:
+			f.write(f"{source_name} {value}\n")
 
 	# Parse the .cir file for DC sweeps
 	dc_sweeps = parse_dc_sweeps(ngspice_cir_file)

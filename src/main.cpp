@@ -218,6 +218,8 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 	// Create the dc_op.dat file in the output directory
 	std::ofstream file;
 	file.open(output_dir/"dc_op.dat");
+
+	file << "Node Voltage" << std::endl;
 	for (auto &it : node_table.table) {
 		if (it.first != "0") {
 			file << it.first << " "
@@ -225,4 +227,21 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 				 << system.x[it.second - 1] << std::endl;
 		}
 	}
+
+	int total_voltage_sources = netlist.voltage_sources.size();
+	int total_inductors = netlist.inductors.size();
+	int total_nodes = node_table.size();
+
+	file << std::endl << "Source Current" << std::endl;
+	for (int i = 0; i < total_voltage_sources; i++) {
+		file << "V" << netlist.voltage_sources.elements[i].name
+			 << " " << system.x[total_nodes - 1 + i] << std::endl;
+	}
+
+	for (int i = 0; i < total_inductors; i++) {
+		file << "L" << netlist.inductors.elements[i].name
+			 << " " << system.x[total_nodes - 1 + total_voltage_sources + i] << std::endl;
+	}
+
+	file.close();
 }

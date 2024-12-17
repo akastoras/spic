@@ -22,9 +22,19 @@ def read_dc_op_file(file_path):
 	with open(file_path, 'r') as file:
 		lines = file.readlines()
 		dc_op = {}
+		parsing_node_voltages = True
 		for line in lines:
-			node_name, voltage = line.upper().split()
-			dc_op[node_name] = float(voltage)
+			if line.isspace() or line.startswith("Node Voltage"):
+				continue
+			if line.startswith("Source Current"):
+				parsing_node_voltages = False
+				continue
+			if parsing_node_voltages:
+				node_name, voltage = line.upper().split()
+				dc_op["V" + node_name] = float(voltage)
+			else:
+				source_name, current = line.upper().split()
+				dc_op[source_name] = float(current)
 		return dc_op
 
 def read_dc_sweep_file(file_path):
@@ -55,10 +65,10 @@ def compare_dc_op_files(file1, file2):
 	if len(dc_op1) == 0:
 		return 0, 0
 
-	for node_name in dc_op1:
-		voltage1 = dc_op1[node_name]
-		voltage2 = dc_op2[node_name]
-		error = relerror(voltage1, voltage2)
+	for name in dc_op1:
+		value1 = dc_op1[name]
+		value2 = dc_op2[name]
+		error = relerror(value1, value2)
 		max_error = max(max_error, error)
 		average_error += error
 	average_error /= len(dc_op1)
