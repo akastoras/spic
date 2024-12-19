@@ -1,10 +1,10 @@
 #include <cmath>
+#include <iostream>
+#include <omp.h>
+
 #include <Eigen/LU>
 #include <Eigen/Cholesky>
 #include <Eigen/IterativeLinearSolvers>
-#include <iostream>
-
-#include <omp.h>
 
 #include "system.h"
 #include "commands.h"
@@ -193,37 +193,178 @@ namespace spic {
 		}
 	}
 
-	bool Solver::CG_integrated_solve(Eigen::VectorXd &b)
+
+	/* CG Method integrated compute */
+	void Solver::CG_integrated_compute()
 	{
-		logger.log(INFO, "CG_integrated_solve(): called.");
-		// Eigen::ConjugateGradient<Eigen::Ref<Eigen::MatrixXd>, Eigen::Lower|Eigen::Upper> cg;
-		// cg.compute(system.A);
-		// system.x = cg.solve(b);
-		// return cg.info() == Eigen::Success;
-		return false;
+		logger.log(INFO, "CG_integrated_compute(): called.");
+		cg = new Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper>(system.A);
+		cg->setTolerance(options.itol);
+	}
+
+	void Solver::CG_integrated_solve(Eigen::VectorXd &b)
+	{
+		system.x = cg->solveWithGuess(b, system.x);
+		// system.x = cg->solve(b);
+		iterations = cg->iterations();
+		error = cg->error();
+	}
+
+
+	/* CG Method custom compute*/
+	void Solver::CG_custom_compute()
+	{
+		logger.log(INFO, "CG_custom_compute(): called.");
+
+		// Calculate the diagonal matrix of preconditioner
+		inv_precond = new Eigen::VectorXd(system.n);
+		(*inv_precond) = system.A.diagonal().array().inverse();
 	}
 
 	void Solver::CG_custom_solve(Eigen::VectorXd &b)
 	{
-		return;
+		if (!inv_precond) {
+			logger.log(ERROR, "CG_custom_solve(): called without a preconditioner.");
+			return;
+		}
+
+		int cg_iter = 0;
+		double alpha, beta, rho, rho1, cg_error = options.itol + 1;
+
+		Eigen::VectorXd r = b - system.A*system.x;
+		Eigen::VectorXd z = r.cwiseProduct(*inv_precond);
+		Eigen::VectorXd p(system.n);
+		Eigen::VectorXd q(system.n);
+
+		double bnorm = b.norm();
+		if (bnorm < EPS) {
+			system.x.setZero();
+			return;
+		}
+
+		while (cg_error > options.itol && cg_iter < system.n) {
+			cg_iter++;
+			z = r.cwiseProduct(*inv_precond); // subroutine
+			rho = r.dot(z);
+
+			if (cg_iter == 1) {
+				p = z;
+			} else {
+				beta = rho / rho1;
+				p = z + beta*p;
+			}
+			rho1 = rho;
+			q = system.A*p; // subroutine
+			alpha = rho / p.dot(q);
+			system.x += alpha*p;
+			r -= alpha*q;
+
+			// Check for convergence
+			cg_error = r.norm() / bnorm;
+		}
+
+		iterations = cg_iter;
+		error = cg_error;
 	}
 
-	bool Solver::BiCG_integrated_solve(Eigen::VectorXd &b)
+
+	/* BiCG Method integrated implementation */
+	void Solver::BiCG_integrated_compute()
 	{
-		logger.log(INFO, "BiCG_integrated_solve(): called.");
-		// Eigen::BiCGSTAB<Eigen::Ref<Eigen::MatrixXd>> bicg;
-		// bicg.compute(system.A);
-		// system.x = bicg.solve(b);
-		// return bicg.info() == Eigen::Success;
-		return false;
+		logger.log(INFO, "BiCG_integrated_compute(): called.");
+		bicg = new Eigen::BiCGSTAB<Eigen::MatrixXd>(system.A);
+		bicg->setTolerance(options.itol);
 	}
 
-	void Solver::BiCG_custom_solve(Eigen::VectorXd &b)
+	void Solver::BiCG_integrated_solve(Eigen::VectorXd &b)
 	{
-		return;
+		system.x = bicg->solveWithGuess(b, system.x);
+		iterations = bicg->iterations();
+		error = bicg->error();
 	}
 
-	// Functions
+
+	/* BiCG Method custom implementation */
+	void Solver::BiCG_custom_compute()
+	{
+		logger.log(INFO, "BiCG_custom_compute(): called.");
+
+		// Calculate the diagonal matrix of preconditioner
+		inv_precond = new Eigen::VectorXd(system.n);
+		(*inv_precond) = system.A.diagonal().array().inverse();
+		for (int i = 0; i < system.n; i++) {
+			if (system.A(i,i) < EPS) {
+				(*inv_precond)(i) = 1;
+			}
+		}
+	}
+
+	bool Solver::BiCG_custom_solve(Eigen::VectorXd &b)
+	{
+		if (!inv_precond) {
+			logger.log(ERROR, "BiCG_custom_solve(): called without a preconditioner.");
+			return false;
+		}
+
+		int bicg_iter = 0;
+		double alpha, beta, omega, rho, rho1, bicg_error = options.itol + 1;
+		Eigen::VectorXd r = b - system.A*system.x;
+
+		Eigen::VectorXd r_tilda = r;
+		Eigen::VectorXd z(system.n), z_tilda(system.n);
+		Eigen::VectorXd p(system.n), p_tilda(system.n);
+		Eigen::VectorXd q(system.n), q_tilda(system.n);
+
+		double bnorm = b.norm();
+		if (bnorm < EPS) {
+			system.x.setZero();
+			return true;
+		}
+
+		while (bicg_error > options.itol && bicg_iter < system.n) {
+			bicg_iter++;
+			z = r.cwiseProduct(*inv_precond); // subroutine
+			z_tilda = r_tilda.cwiseProduct(*inv_precond); // subroutine
+			rho = r_tilda.dot(z);
+
+			if (abs(rho) < EPS) {
+				return false;
+			}
+
+			if (bicg_iter == 1) {
+				p = z;
+				p_tilda = z_tilda;
+			} else {
+				beta = rho / rho1;
+				p = z + beta*p;
+				p_tilda = z_tilda + beta*p_tilda;
+			}
+			rho1 = rho;
+
+			q = system.A*p; // subroutine
+			q_tilda = system.A.transpose()*p_tilda; // subroutine
+
+			omega = p_tilda.dot(q);
+			if (abs(omega) < EPS) {
+				return false;
+			}
+
+			alpha = rho / omega;
+			system.x += alpha*p;
+			r -= alpha*q;
+			r_tilda -= alpha*q_tilda;
+
+			bicg_error = r.norm() / bnorm;
+		}
+
+		iterations = bicg_iter;
+		error = bicg_error;
+		return true;
+	}
+
+	/* Wrapper functions */
+
+	/* Decompose is called before solve for direct methods */
 	bool Solver::decompose()
 	{
 		double start = omp_get_wtime();
@@ -249,6 +390,9 @@ namespace spic {
 				res = LU_integrated_decompose();
 			}
 			break;
+		default:
+			logger.log(ERROR, "decompose(): Invalid method.");
+			exit(1);
 		}
 
 		successful_decomposition = res;
@@ -257,9 +401,43 @@ namespace spic {
 		return res;
 	}
 
+	/* Compute is called before solve for Iterative methods */
+	void Solver::compute()
+	{
+		double start = omp_get_wtime();
+
+		switch (method)
+		{
+		case BiCG:
+			if (options.custom) {
+				BiCG_custom_compute();
+			} else {
+				BiCG_integrated_compute();
+			}
+			break;
+		case CG:
+			if (options.custom) {
+				CG_custom_compute();
+			} else {
+				CG_integrated_compute();
+			}
+			break;
+		default:
+			logger.log(ERROR, "compute(): Invalid method.");
+			exit(1);
+		}
+
+		perf_counter.secs_in_compute_calls += omp_get_wtime() - start;
+	}
+
+	/* solve() is called with a b to solve the system
+	 *  - For iterative methods solve() must be called after compute()
+	 *  - For direct methods solve() must be called after decompose()
+	 */
 	void Solver::solve(Eigen::VectorXd &b)
 	{
 		double start = omp_get_wtime();
+		bool res;
 
 		switch (method)
 		{
@@ -283,12 +461,25 @@ namespace spic {
 			} else {
 				CG_integrated_solve(b);
 			}
+			logger.log(INFO, "CG: Error was " + std::to_string(error) + " in "
+									+ std::to_string(iterations) + " Iterations: ");
+			break;
 		case BiCG:
 			if (options.custom) {
-				BiCG_custom_solve(b);
+				res = BiCG_custom_solve(b);
+				if (!res) {
+					logger.log(ERROR, "BiCG_custom_solve(): failed.");
+				}
 			} else {
 				BiCG_integrated_solve(b);
 			}
+
+			logger.log(INFO, "BiCG: Error was " + std::to_string(error) + " in "
+									+ std::to_string(iterations) + " Iterations: ");
+			break;
+		default:
+			logger.log(ERROR, "solve(): Invalid method.");
+			exit(1);
 		}
 
 		perf_counter.secs_in_solve_calls += omp_get_wtime() - start;
@@ -300,8 +491,10 @@ namespace spic {
 	{
 		std::ofstream file(filename.string(), std::ofstream::out);
 		file << "secs_in_decompose: " << perf_counter.secs_in_decompose_calls << std::endl;
+		file << "secs_in_compute: " << perf_counter.secs_in_compute_calls << std::endl;
 		file << "secs_in_solve: " << perf_counter.secs_in_solve_calls << std::endl;
 		file << "decompose_calls: " << perf_counter.decompose_calls << std::endl;
+		file << "compute_calls: " << perf_counter.compute_calls << std::endl;
 		file << "solve_calls: " << perf_counter.solve_calls << std::endl;
 		file.close();
 	}

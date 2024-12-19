@@ -13,7 +13,12 @@ namespace spic {
 		Eigen::VectorXd x; // Unknown Variable matrix
 		Eigen::VectorXd b; // Matrix with source values
 
-		System(int n) : n(n), A(n, n), b(n), x(n) {}
+		System(int n) : n(n), A(n, n), b(n), x(n)
+		{
+			A.setZero();
+			b.setZero();
+			x.setZero();
+		}
 	};
 
 	class MNASystemDC : public System {

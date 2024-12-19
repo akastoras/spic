@@ -18,10 +18,6 @@ namespace spic {
 		int total_inductors = netlist.inductors.size();
 		int node_pos, node_neg, matrix_inductor_idx, matrix_voltage_idx;
 
-		// Initialize matrices
-		A.setZero();
-		b.setZero();
-
 		// Fill the matrix with the stamps of the resistors
 		for (auto it = netlist.resistors.elements.begin(); it != netlist.resistors.elements.end(); ++it) {
 			add_resistor_stamp(it->node_positive, it->node_negative, it->value);
