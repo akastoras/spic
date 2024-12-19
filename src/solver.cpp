@@ -58,6 +58,7 @@ namespace spic {
 
 		// Initialize permutation vector
 		perm = new Eigen::VectorXi(system.n);
+		Eigen::MatrixXd &A = system.A;
 
 		// Initialize permutation vector
 		for (int i = 0; i < system.n; i++) {
@@ -66,37 +67,37 @@ namespace spic {
 
 		for (int k = 0; k < system.n; k++) {
 			int pivot = k;
-			double max_val = std::abs(system.A(k,k));
+			double max_val = std::abs(A(k,k));
 
 			// Find pivot row
 			for (int i = k + 1; i < system.n; i++) {
-				if (std::abs(system.A(i,k)) > max_val) {
-					max_val = system.A(i,k);
+				if (std::abs(A(i,k)) > max_val) {
+					max_val = A(i,k);
 					pivot = i;
 				}
 			}
 
 			// Swap rows in A and permutation vector
 			if (pivot != k) {
-				system.A.row(k).swap(system.A.row(pivot));
+				A.row(k).swap(A.row(pivot));
 				std::swap((*perm)[k], (*perm)[pivot]);
 			}
 
 			// Check for singular matrix
-			if (system.A(k, k) == 0) {
+			if (A(k, k) == 0) {
 				logger.log(ERROR, "LU_custom_decompose(): Singular matrix in LU, cannot proceed.");
 				return false;
 			}
 
 			// Compute kth column of L matrix
 			for (int i = k + 1; i < system.n; i++) {
-				system.A(i,k) /= system.A(k,k);
+				A(i,k) /= A(k,k);
 			}
 
 			// Update the rest of the matrix
 			for (int i = k + 1; i < system.n; i++) {
 				for (int j = k + 1; j < system.n; j++) {
-					system.A(i,j) -= system.A(i,k)*system.A(k,j);
+					A(i,j) -= A(i,k)*A(k,j);
 				}
 			}
 		}
@@ -109,27 +110,28 @@ namespace spic {
 			logger.log(ERROR, "LU_custom_solve(): called without a successful decomposition.");
 			return;
 		}
-		Eigen::VectorXd y(system.n); // Temporary vector for solving Ly = b
+		// Storing y directly on x, since x's initial value will be y
+		Eigen::VectorXd &x = system.x;
+		Eigen::MatrixXd &A = system.A;
 
 		// Forward substitution
 		for (int i = 0; i < system.n; i++) {
-			y(i) = b((*perm)(i));
+			x(i) = b((*perm)(i));
 			for (int j = 0; j < i; j++) {
-				y(i) -= system.A(i,j)*y(j);
+				x(i) -= A(i,j)*x(j);
 			}
+			// x(i) = x(i) / L(i,i) == x(i) / 1 == x(i)
 		}
 
 		// Backward substitution
 		for (int i = system.n - 1; i >= 0; i--) {
-			system.x(i) = y(i);
 			for (int j = i + 1; j < system.n; j++) {
-				system.x(i) -= system.A(i,j)*system.x(j);
+				x(i) -= A(i,j)*x(j);
 			}
-			system.x(i) /= system.A(i,i);
+			x(i) /= A(i,i);
 		}
 	}
 
-	// TODO: Store only the L matrix since U = L^T
 	bool Solver::cholesky_custom_decompose()
 	{
 		logger.log(INFO, "cholesky_custom_decompose(): called.");
@@ -152,8 +154,8 @@ namespace spic {
 			}
 
 			for (int i = k + 1; i < system.n; i++) {
+				// Write only L matrix
 				A(i,k) = (A(i,k) - A.row(i).head(k).dot(A.row(k).head(k))) / A(k,k);
-				A(k,i) = A(i,k);
 			}
 		}
 
@@ -166,24 +168,28 @@ namespace spic {
 			logger.log(ERROR, "cholesky_custom_solve(): called without a successful decomposition.");
 			return;
 		}
-		Eigen::VectorXd y(system.n); // Temporary vector for solving Ly = b
+		// Storing y directly on x, since x's initial value will be y
+		Eigen::VectorXd &x = system.x;
+		Eigen::MatrixXd &A = system.A;
 
 		// Forward substitution
 		for (int i = 0; i < system.n; i++) {
-			y(i) = b(i);
+			x(i) = b(i);
 			for (int j = 0; j < i; j++) {
-				y(i) -= system.A(i,j)*y(j);
+				x(i) -= A(i,j)*x(j);
 			}
-			y(i) /= system.A(i,i);
+			x(i) /= A(i,i);
 		}
 
 		// Backward substitution
 		for (int i = system.n - 1; i >= 0; i--) {
-			system.x(i) = y(i);
 			for (int j = i + 1; j < system.n; j++) {
-				system.x(i) -= system.A(i,j)*system.x(j);
+				// Algorithmically, accessing A(i,j) is equivalent to A(j,i)
+				// since A is symmetric, and since we don't store L^T
+				// we access A(j,i) instead of A(i,j)
+				x(i) -= A(j,i)*x(j);
 			}
-			system.x(i) /= system.A(i,i);
+			x(i) /= A(i,i);
 		}
 	}
 

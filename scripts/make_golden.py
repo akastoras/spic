@@ -17,7 +17,7 @@ def modify_cir_file(cir_file, output_dir):
 
 	modified_lines = []
 	op_line_added = False
-	op_present = any('.OP' in line.upper() for line in lines)
+	op_present = any('.OP' == line.upper().strip() for line in lines)
 
 	for line in lines:
 		if not op_present and not op_line_added and line.strip().upper().startswith('.DC'):
@@ -63,6 +63,7 @@ def run_ngspice(cir_file, out_file):
 	solution_i = []
 	first_line = 0
 	end_line = 0
+	source_start = -1
 	for i, line in enumerate(lines):
 		line = line.strip()
 		line = line.split()
@@ -84,13 +85,11 @@ def run_ngspice(cir_file, out_file):
 
 	for line in lines[source_start:]:
 		line = line.upper().strip()
-		print(line)
 		pattern = re.compile(r'(\S+)#BRANCH\s+(\S+)')
 		match = pattern.match(line)
 		if match:
 			branch_name = match.group(1)
 			value = match.group(2)
-			print(branch_name, value)
 		else:
 			break
 		solution_i.append((branch_name, value))

@@ -46,8 +46,9 @@ def run_tests(tests_dir, custom, iter_methods, itol, version_num):
 			print('Running test', test_path)
 			script_dir = os.path.dirname(os.path.realpath(__file__))
 			test_cir = os.path.join(script_dir, "test_cir.py")
-			subprocess.run(['python3', test_cir, "--cir_file", test_path, "--version", version_num] + params)
-
+			result = subprocess.run(['python3', test_cir, "--cir_file", test_path, "--version", version_num] + params)
+			if result.returncode != 0:
+				raise RuntimeError(f"test_cir.py failed for cir_file {test_path}")
 
 def read_csv_files(tests_dir, version):
 	# Read the csv files with the results of the tests
