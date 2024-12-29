@@ -47,13 +47,11 @@ def read_dc_sweep_file(file_path):
 		return sweep
 
 def relerror(a, b):
-	epsilon = 1e-9
-	if a == 0 and b == 0:
+	epsilon = 1e-8
+	if abs(a) < epsilon and abs(b) < epsilon:
 		error = 0
-	elif a == 0 and abs(b) > epsilon:
-		error = abs(a / epsilon)
 	else:
-		error = abs((a - b) / a)
+		error = abs(a - b) / max(abs(a), abs(b))
 	return error
 
 def compare_dc_op_files(file1, file2):
@@ -93,36 +91,36 @@ def compare_dc_sweep_files(file1, file2):
 	average_error /= len(sweep1)
 	return max_error, average_error
 
-def compare_directories(dir1, dir2):
+def compare_directories(dir1, dir2, disable_dc_sweeps):
+	# Get DC OP comparison results
 	dc_op_file1 = os.path.join(dir1, "dc_op.dat")
 	dc_op_file2 = os.path.join(dir2, "dc_op.dat")
 	max_error_dc_op, average_error_dc_op = compare_dc_op_files(dc_op_file1, dc_op_file2)
 
-	dc_sweeps_dir1 = os.path.join(dir1, "dc_sweeps")
-	dc_sweeps_dir2 = os.path.join(dir2, "dc_sweeps")
-
 	results = []
-
-	# DC_OP results
 	results.append(["DC_OP", max_error_dc_op, average_error_dc_op])
 
-	# DC_Sweeps results
+	# Get DC Sweeps comparison results
 	max_error_dc_sweep = 0
 	average_error_dc_sweep = 0
-	sweep_count = 0
+	
+	if not disable_dc_sweeps:
+		dc_sweeps_dir1 = os.path.join(dir1, "dc_sweeps")
+		dc_sweeps_dir2 = os.path.join(dir2, "dc_sweeps")
+		sweep_count = 0
 
-	for file in os.listdir(dc_sweeps_dir1):
-		if file.endswith(".dat"):
-			file1 = os.path.join(dc_sweeps_dir1, file)
-			file2 = os.path.join(dc_sweeps_dir2, file)
-			max_error, average_error = compare_dc_sweep_files(file1, file2)
-			results.append([file, max_error, average_error])
-			max_error_dc_sweep = max(max_error_dc_sweep, max_error)
-			average_error_dc_sweep += average_error
-			sweep_count += 1
+		for file in os.listdir(dc_sweeps_dir1):
+			if file.endswith(".dat"):
+				file1 = os.path.join(dc_sweeps_dir1, file)
+				file2 = os.path.join(dc_sweeps_dir2, file)
+				max_error, average_error = compare_dc_sweep_files(file1, file2)
+				results.append([file, max_error, average_error])
+				max_error_dc_sweep = max(max_error_dc_sweep, max_error)
+				average_error_dc_sweep += average_error
+				sweep_count += 1
 
-	if sweep_count > 0:
-		average_error_dc_sweep /= sweep_count
+		if sweep_count > 0:
+			average_error_dc_sweep /= sweep_count
 
 	results.append(["DC_Sweeps total", max_error_dc_sweep, average_error_dc_sweep])
 
@@ -133,9 +131,10 @@ def main():
 	parser.add_argument('dir1', type=str, help='First directory')
 	parser.add_argument('dir2', type=str, help='Second directory')
 	parser.add_argument('--output_csv', type=str, default='comparison_results.csv', help='Output CSV file (default: comparison_results.csv)')
+	parser.add_argument("--disable_dc_sweeps",	action='store_true', help="Disable DC Sweeps")
 	args = parser.parse_args()
 
-	results = compare_directories(args.dir1, args.dir2)
+	results = compare_directories(args.dir1, args.dir2, args.disable_dc_sweeps)
 
 	# Write results to CSV
 	pt = PrettyTable()

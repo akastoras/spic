@@ -10,7 +10,7 @@
 #include "system.h"
 #include "util.h"
 
-#define EPS 1e-10
+#define EPS 1e-23
 
 namespace spic {
 	typedef struct options {
@@ -100,7 +100,7 @@ namespace spic {
 
 		/* Wrappers for decompose and solve */
 		void solve(Eigen::VectorXd &b);
-		void dump_perf_counters(std::filesystem::path &filename);
+		void dump_perf_counters(std::filesystem::path &filename, double g_time);
 
 		private:
 		bool decompose();

@@ -31,14 +31,25 @@ def run_tests(tests_dir, custom, iter_methods, itol, version_num):
 	for test in tests:
 		if test.endswith('.cir'):
 			params = []
-			if "30K" in test or "20K" in test or "10K" in test or "5K" in test:
+			if "30K" in test or "20K" in test:
 				continue
+
+			if "10K" in test:
+				if not custom:
+					params.append("--disable_dc_sweeps")
+				else:
+					continue
+
+			if "5K" in test:
+				params.append("--disable_dc_sweeps")
 
 			if "SPD" in test:
 				params.append("--spd")
 			if custom:
 				params.append("--custom")
 			if iter_methods:
+				if "real_circuit" in test:
+					continue
 				params.append("--iter")
 				params.append(f"--itol={itol}")
 

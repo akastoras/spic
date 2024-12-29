@@ -39,14 +39,19 @@ int main(int argc, char** argv)
 {
 	// and average of solve. Also the parsing and the MNA construction
 	// Print all times and a total timer at the end of the program
+	double g_timer_start = omp_get_wtime();
 	Logger logger = Logger(std::cout);
 
 	// Define the supported options
 	po::variables_map vm;
 	parse_arguments(vm, argc, argv);
 
+	// Get the parsed arguments
+	bool bypass_options = vm["bypass_options"].as<bool>();
+	bool disable_dc_sweeps = vm["disable_dc_sweeps"].as<bool>();
 	std::string cir_file_str = vm["cir_file"].as<std::string>();
 	std::string output_dir_str = vm["output_dir"].as<std::string>();
+
 	std::filesystem::path cir_file(cir_file_str);
 	std::filesystem::path output_dir(output_dir_str);
 
@@ -55,7 +60,6 @@ int main(int argc, char** argv)
 	parse_spice_file(cir_file, logger);
 
 	// Check if the user want to bypass the .cir options from spic
-	bool bypass_options = vm["bypass_options"].as<bool>();
 	if (bypass_options) {
 		logger.log(INFO, "Bypassing .OPTIONS");
 		commands.options.spd = vm["spd"].as<bool>();
@@ -84,12 +88,17 @@ int main(int argc, char** argv)
 						cir_file, cir_file_str, bypass_options, logger);
 
 	// Perform the dc sweeps (if there are any)
-	commands.dc_sweeps_dir = output_dir/"dc_sweeps";
-	commands.perform_dc_sweeps(slv, logger);
+	if (!disable_dc_sweeps) {
+		commands.dc_sweeps_dir = output_dir/"dc_sweeps";
+		commands.perform_dc_sweeps(slv, logger);
+	}
 
+	// Performance Counters
 	logger.log(INFO, "Dumping performance report.");
 	std::filesystem::path perf_rpt = output_dir/"spic_performance.rpt";
-	slv.dump_perf_counters(perf_rpt);
+	double g_total_time = omp_get_wtime() - g_timer_start;
+	logger.log(INFO, "spic execution time was " + std::to_string(g_total_time));
+	slv.dump_perf_counters(perf_rpt, g_total_time);
 
 	logger.log(INFO, "Simulator finished. Exiting...");
 	return 0;
@@ -105,11 +114,12 @@ void parse_arguments(po::variables_map &vm, int argc, char **argv) {
 		("output_dir", po::value<std::string>()->default_value(""),
 							"Output directory (default: <filename>_golden)")
 		("bypass_options", po::bool_switch()->default_value(false), "Bypass .cir file options")
+		("disable_dc_sweeps", po::bool_switch()->default_value(false), "Disable DC Sweeps")
 		("spd", po::bool_switch()->default_value(false), "Enable SPD option")
 		("custom", po::bool_switch()->default_value(false), "Enable custom solver option")
 		("iter", po::bool_switch()->default_value(false), "Enable iterative solver option")
 		("itol", po::value<double>()->default_value(1e-3), "Set iteration tolerance");
-
+		
 	try {
 		po::store(po::parse_command_line(argc, argv, desc), vm);
 		po::notify(vm);

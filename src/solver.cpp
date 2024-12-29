@@ -428,6 +428,7 @@ namespace spic {
 		}
 
 		perf_counter.secs_in_compute_calls += omp_get_wtime() - start;
+		perf_counter.compute_calls++;
 	}
 
 	/* solve() is called with a b to solve the system
@@ -487,15 +488,16 @@ namespace spic {
 	}
 
 	/* Dump performance counters to a file */
-	void Solver::dump_perf_counters(std::filesystem::path &filename)
+	void Solver::dump_perf_counters(std::filesystem::path &filename, double g_time)
 	{
 		std::ofstream file(filename.string(), std::ofstream::out);
-		file << "secs_in_decompose: " << perf_counter.secs_in_decompose_calls << std::endl;
-		file << "secs_in_compute: " << perf_counter.secs_in_compute_calls << std::endl;
-		file << "secs_in_solve: " << perf_counter.secs_in_solve_calls << std::endl;
-		file << "decompose_calls: " << perf_counter.decompose_calls << std::endl;
-		file << "compute_calls: " << perf_counter.compute_calls << std::endl;
-		file << "solve_calls: " << perf_counter.solve_calls << std::endl;
+		file << "secs_in_decompose:\t" << perf_counter.secs_in_decompose_calls << std::endl;
+		file << "secs_in_compute:\t" << perf_counter.secs_in_compute_calls << std::endl;
+		file << "secs_in_solve:\t" << perf_counter.secs_in_solve_calls << std::endl;
+		file << "decompose_calls:\t" << perf_counter.decompose_calls << std::endl;
+		file << "compute_calls:\t" << perf_counter.compute_calls << std::endl;
+		file << "solve_calls:\t" << perf_counter.solve_calls << std::endl;
+		file << "total_secs:\t" << g_time << std::endl;
 		file.close();
 	}
 }
