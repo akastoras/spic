@@ -17,6 +17,7 @@ namespace spic {
 		bool custom; // Enable usage of custom implementations
 		bool spd; // If iter=false: Enable cholesky decomp, else: Enable conjugate gradient
 		bool iter; // Enables iterative methods (conjugate gradient & biconjugate gradient)
+		bool sparse; // Enables the usage of sparse matrices
 		double itol; // The convergence threshold for iterative methods
 	} options_t;
 

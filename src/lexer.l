@@ -95,6 +95,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 "CUSTOM"			{ return print_token(T_CUSTOM); }
 "ITER"				{ return print_token(T_ITER); }
 "ITOL="				{ return print_token(T_ITOL); }
+"SPARSE"			{ return print_token(T_SPARSE); }
 
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 
@@ -218,6 +219,8 @@ int print_token(int token)
 		std::cout << "Found Iterative Method Command\n";
 	} else if (token == T_ITOL) {
 		std::cout << "Found Iteration Tolerance\n";
+	} else if (token == T_SPARSE) {
+		std::cout << "Found Sparse Matrix Option\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

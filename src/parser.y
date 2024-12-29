@@ -60,6 +60,7 @@
 %token	T_SPD		"MNA static matrix is SPD"
 %token	T_CUSTOM	"MNA system should be solved with custom solver"
 %token	T_ITER		"MNA system should be solved with iterative method"
+%token	T_SPARSE	"Sparse matrix option"
 %token	T_ITOL		"MNA sytem should be solved with defined tolerance when using iterative methods"
 %token	T_DC		".DC"
 %token	T_PRINT		".PRINT"
@@ -113,40 +114,40 @@ d: T_D node node T_NAME T_AREA value { $$ = new spic::Diode($1, $2, $3, $4, $6);
 
 m: T_M node node node node T_NAME T_LENGTH value T_WIDTH value { $$ = new spic::MOS($1, $2, $3, $4, $5, $6, $8, $10); delete $1; delete $6; }
 
-q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $5, $7); delete $1; delete $5; }
- | T_Q node node node T_NAME { $$ = new spic::BJT($1, $2, $3, $4, $5, 1.0);             delete $1; delete $5; }
+q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $5, $7);  delete $1; delete $5; }
+ | T_Q node node node T_NAME              { $$ = new spic::BJT($1, $2, $3, $4, $5, 1.0); delete $1; delete $5; }
 
 node: T_INTEGER { $$ = find_or_append_node_int($1); }
-	| T_NAME { $$ = find_or_append_node_str($1); delete $1; }
+	| T_NAME    { $$ = find_or_append_node_str($1); delete $1; }
 
-value: T_PLUS T_FLOAT { $$ = $2; }
-	| T_MINUS T_FLOAT { $$ = -$2; }
+value: T_PLUS T_FLOAT   { $$ = $2; }
+	| T_MINUS T_FLOAT   { $$ = -$2; }
 	| T_FLOAT
-	| T_PLUS T_INTEGER { $$ = (float) $2; }
+	| T_PLUS T_INTEGER  { $$ = (float)  $2; }
 	| T_MINUS T_INTEGER { $$ = (float) -$2; }
-	| T_INTEGER { $$ = (float) $1; }
+	| T_INTEGER         { $$ = (float)  $1; }
 
 commands: command commands
 		| /* empty */
 
 // Options for the simulation
-command: T_OPTIONS options  
+command:  T_OPTIONS options
 		| T_DC T_V value value value { check_dc_sweep(commands.add_v_dc_sweep(*$2, $3, $4, $5), "Voltage Source", *$2); }
 		| T_DC T_I value value value { check_dc_sweep(commands.add_i_dc_sweep(*$2, $3, $4, $5), "Current Source", *$2); }
 		| T_PRINT { global_node_list_ptr = &commands.print_nodes; } v_nodes
-		| T_PLOT { global_node_list_ptr = &commands.plot_nodes; } v_nodes
+		| T_PLOT  { global_node_list_ptr = &commands.plot_nodes;  } v_nodes
 
-options: options T_SPD { commands.options.spd = true; }
-		| options T_CUSTOM { commands.options.custom = true; }
-		| options T_ITER { commands.options.iter = true; }
-		| options T_ITOL T_FLOAT { commands.options.itol = $3; }
-		| T_SPD { commands.options.spd = true; }
-		| T_CUSTOM { commands.options.custom = true; }
-		| T_ITER { commands.options.iter = true; }
+options : option options
+		| /* empty */
+
+option:   T_SPD          { commands.options.spd = true; }
+		| T_CUSTOM       { commands.options.custom = true; }
+		| T_ITER         { commands.options.iter = true; }
 		| T_ITOL T_FLOAT { commands.options.itol = $2; }
+		| T_SPARSE       { commands.options.sparse = true; }
 
 v_nodes: v_nodes T_VNODE { add_node_to_list($2); delete $2; }
-	| T_VNODE { add_node_to_list($1); delete $1; }
+	| T_VNODE            { add_node_to_list($1); delete $1; }
 
 %%
 

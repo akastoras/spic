@@ -64,6 +64,7 @@ int main(int argc, char** argv)
 		logger.log(INFO, "Bypassing .OPTIONS");
 		commands.options.spd = vm["spd"].as<bool>();
 		commands.options.custom = vm["custom"].as<bool>();
+		commands.options.sparse = vm["sparse"].as<bool>();
 		commands.options.iter = vm["iter"].as<bool>();
 		commands.options.itol = vm["itol"].as<double>();
 	}
@@ -117,6 +118,7 @@ void parse_arguments(po::variables_map &vm, int argc, char **argv) {
 		("disable_dc_sweeps", po::bool_switch()->default_value(false), "Disable DC Sweeps")
 		("spd", po::bool_switch()->default_value(false), "Enable SPD option")
 		("custom", po::bool_switch()->default_value(false), "Enable custom solver option")
+		("sparse", po::bool_switch()->default_value(false), "Enable sparse solver option")
 		("iter", po::bool_switch()->default_value(false), "Enable iterative solver option")
 		("itol", po::value<double>()->default_value(1e-3), "Set iteration tolerance");
 		
