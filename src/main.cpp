@@ -80,19 +80,19 @@ int main(int argc, char** argv)
 
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
-	if (!commands.options.sparse) {
-		spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
+	if (commands.options.sparse) {
+		spic::MNASparseSystemDC *sparse_system = new spic::MNASparseSystemDC(netlist, node_table.size());
 		// Construct a Solver object
-		slv = new spic::Solver(system, commands.options, logger);
+		slv = new spic::Solver(*sparse_system, commands.options, logger);
 		// Solve on the operating point
-		solve_operating_point(slv, system.x, system.b, output_dir, output_dir_str,
+		solve_operating_point(slv, sparse_system->x, sparse_system->b, output_dir, output_dir_str,
 							cir_file, cir_file_str, bypass_options, logger);
 	} else {
-		spic::MNASparseSystemDC system = spic::MNASparseSystemDC(netlist, node_table.size());
+		spic::MNASystemDC *system = new spic::MNASystemDC(netlist, node_table.size());
 		// Construct a Solver object
-		slv = new spic::Solver(system, commands.options, logger);
+		slv = new spic::Solver(*system, commands.options, logger);
 		// Solve on the operating point
-		solve_operating_point(slv, system.x, system.b, output_dir, output_dir_str,
+		solve_operating_point(slv, system->x, system->b, output_dir, output_dir_str,
 							cir_file, cir_file_str, bypass_options, logger);
 	}
 
@@ -121,7 +121,7 @@ void parse_arguments(po::variables_map &vm, int argc, char **argv) {
 		("help", "produce help message")
 		("cir_file", po::value<std::string>(), "Path to the circuit file")
 		("output_dir", po::value<std::string>()->default_value(""),
-							"Output directory (default: <filename>_golden)")
+							"Output directory")
 		("bypass_options", po::bool_switch()->default_value(false), "Bypass .cir file options")
 		("disable_dc_sweeps", po::bool_switch()->default_value(false), "Disable DC Sweeps")
 		("spd", po::bool_switch()->default_value(false), "Enable SPD option")
@@ -227,8 +227,9 @@ void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorX
 
 		// Append the user's options to the end of the new file
 		std::string user_options = std::string(".OPTIONS")
-								+ std::string((commands.options.spd ? " SPD" : ""))
+								+ std::string(commands.options.spd ? " SPD" : "")
 								+ std::string(commands.options.custom ? " CUSTOM" : "")
+								+ std::string(commands.options.sparse ? " SPARSE" : "")
 								+ std::string(commands.options.iter ? " ITER" : "")
 								+ std::string(" ITOL=") + std::to_string(commands.options.itol);
 		out_file << user_options << std::endl;

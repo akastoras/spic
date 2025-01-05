@@ -47,10 +47,10 @@ namespace spic {
 	}
 
 	/* For a resistor, do the following adjustments to the static_matrix (A):
-	 * A(<->,<+>) -= 1/conductance
-	 * A(<+>,<->) -= 1/conductance
-	 * A(<+>,<+>) += 1/conductance
-	 * A(<->,<->) += 1/conductance
+	 * A(<->,<+>) -= 1/resistance
+	 * A(<+>,<->) -= 1/resistance
+	 * A(<+>,<+>) += 1/resistance
+	 * A(<->,<->) += 1/resistance
 	 * Where <+>,<-> are the positive and negative nodes of the resistor
 	 */
 	void MNASystemDC::add_resistor_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
@@ -147,18 +147,19 @@ namespace spic {
 		A.setFromTriplets(triplets.begin(), triplets.end());
 	}
 
+
 	/* For a resistor, do the following adjustments to the static_matrix (A):
-	 * A(<->,<+>) -= 1/conductance
-	 * A(<+>,<->) -= 1/conductance
-	 * A(<+>,<+>) += 1/conductance
-	 * A(<->,<->) += 1/conductance
+	 * A(<->,<+>) -= 1/resistance
+	 * A(<+>,<->) -= 1/resistance
+	 * A(<+>,<+>) += 1/resistance
+	 * A(<->,<->) += 1/resistance
 	 * Where <+>,<-> are the positive and negative nodes of the resistor
 	 */
-	void MNASparseSystemDC::add_resistor_stamp(std::vector<Eigen::Triplet<double>> triplets,
+	void MNASparseSystemDC::add_resistor_stamp(std::vector<Eigen::Triplet<double>> &triplets,
 												node_id_t node_positive, node_id_t node_negative,
 												float value)
 	{
-		double conductance = 1 / value;
+		double conductance = 1.0 / value;
 		if (node_positive > 0 && node_negative > 0) {
 			triplets.push_back(Eigen::Triplet<double>(node_positive-1, node_negative-1, -conductance));
 			triplets.push_back(Eigen::Triplet<double>(node_negative-1, node_positive-1, -conductance));
@@ -196,7 +197,7 @@ namespace spic {
 	 * n is the total number of nodes and k is the index of the voltage source
 	 * Note that in DC analysis the inductors are considered as voltage sources with 0 value
 	 */
-	void MNASparseSystemDC::add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> triplets,
+	void MNASparseSystemDC::add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> &triplets,
 													node_id_t node_positive, node_id_t node_negative,
 													int voltage_src_id, float value)
 	{
@@ -288,4 +289,3 @@ std::ostream& operator<<(std::ostream &out, spic::System &system)
 	printSystem(system.A, system.b);
 	return out;
 }
-

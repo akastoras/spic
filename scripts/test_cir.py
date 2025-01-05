@@ -2,13 +2,15 @@ import subprocess
 import os
 import argparse
 
-def get_version_name(custom, iter_solver, itol, version_num):
+def get_version_name(custom, sparse, iter_solver, version_num):
 	version = []
 	if custom:
 		version.append("CUSTOM")
 	else:
 		version.append("INTEGRATED")
 
+	if sparse:
+		version.append("SPARSE")
 	if iter_solver:
 		version.append("ITER")
 	version.append(version_num)
@@ -17,8 +19,9 @@ def get_version_name(custom, iter_solver, itol, version_num):
 def main():
 	parser = argparse.ArgumentParser(description="Run spic with circuit file and process output to make csv with errors.")
 	parser.add_argument("--cir_file", help="Path to the circuit file", default=None)
-	parser.add_argument("--spd", 	action='store_true', help="Enable SPD option")
-	parser.add_argument("--custom",	action='store_true', help="Enable CUSTOM option")
+	parser.add_argument("--spd", 	action='store_true', help="Enable SPD matrix option")
+	parser.add_argument("--custom",	action='store_true', help="Enable custom solver option")
+	parser.add_argument("--sparse", action='store_true', help='Enable sparse matrix option')
 	parser.add_argument("--iter",	action='store_true', help="Enable iterative solver option")
 	parser.add_argument("--itol", help="Set iteration tolernace", default="1e-3")
 	parser.add_argument("--disable_dc_sweeps",	action='store_true', help="Disable DC Sweeps")
@@ -28,16 +31,19 @@ def main():
 	cir_file = args.cir_file
 	spd = args.spd
 	custom = args.custom
+	sparse = args.sparse
 	iter_solver = args.iter
 	itol = args.itol
 	disable_dc_sweeps = args.disable_dc_sweeps
 	cmp_dirs_args = []
 	spic_option_args = ["--bypass_options"]
-
-	if custom:
-		spic_option_args.append("--custom")
+	
 	if spd:
 		spic_option_args.append("--spd")
+	if custom:
+		spic_option_args.append("--custom")
+	if sparse:
+		spic_option_args.append("--sparse")
 	if iter_solver:
 		spic_option_args.append("--iter")
 		spic_option_args.append(f"--itol={args.itol}")
@@ -45,7 +51,7 @@ def main():
 		spic_option_args.append("--disable_dc_sweeps")
 		cmp_dirs_args.append("--disable_dc_sweeps")
 
-	version = get_version_name(custom, iter_solver, itol, args.version)
+	version = get_version_name(custom, sparse, iter_solver, args.version)
 
 	test_name = cir_file.removesuffix(".cir").split("/")[-1]
 	spic_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")

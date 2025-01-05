@@ -25,7 +25,7 @@ from prettytable import PrettyTable
 from test_cir import get_version_name
 
 
-def run_tests(tests_dir, custom, iter_methods, itol, version_num):
+def run_tests(tests_dir, custom, sparse, iter_methods, itol, version_num):
 	# Compute average error for each test
 	tests = os.listdir(tests_dir)
 	for test in tests:
@@ -47,6 +47,8 @@ def run_tests(tests_dir, custom, iter_methods, itol, version_num):
 				params.append("--spd")
 			if custom:
 				params.append("--custom")
+			if sparse:
+				params.append("--sparse")
 			if iter_methods:
 				if "real_circuit" in test:
 					continue
@@ -85,16 +87,20 @@ def read_csv_files(tests_dir, version):
 def main():
 	parser = argparse.ArgumentParser(description='Run all tests in a directory')
 	parser.add_argument('tests_dir', help='Directory containing tests')
-	parser.add_argument('--custom', action='store_true', help='Directory containing tests')
-	parser.add_argument('--iter', action='store_true', help='Directory containing tests')
+	parser.add_argument("--custom",	action='store_true', help="Enable custom solver option")
+	parser.add_argument("--sparse", action='store_true', help='Enable sparse matrix option')
+	parser.add_argument("--iter",	action='store_true', help="Enable iterative solver option")
 	parser.add_argument('--itol', help='Tolerance for iterative solver', default='1e-3')
 	parser.add_argument("--version", help="Version of evaluation", default="0")
 
 	args = parser.parse_args()
 	tests_dir = args.tests_dir
-	version_str = get_version_name(args.custom, args.iter, args.itol, args.version)
+	version_str = get_version_name(args.custom, args.sparse, args.iter, args.version)
 
-	run_tests(tests_dir, args.custom, args.iter, args.itol, args.version)
+	if args.sparse and not args.iter and args.custom:
+		raise ValueError("Sparse matrix option is only available for custom iterative solver")
+
+	run_tests(tests_dir, args.custom, args.sparse, args.iter, args.itol, args.version)
 	results = read_csv_files(tests_dir, version_str)
 
 	# Write results to CSV

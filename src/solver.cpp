@@ -6,7 +6,7 @@
 #include <Eigen/Cholesky>
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/SparseLU>
-#include <Eigen/SparseCholesky>	
+#include <Eigen/SparseCholesky>
 
 #include "system.h"
 #include "commands.h"
@@ -18,11 +18,7 @@ namespace spic {
 	{
 		if (options.sparse) {
 			logger.log(INFO, "LU_integrated_decompose: called with a sparse system.");
-			sparse_lu = new Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>();
-			// Compute the ordering permutation vector from the structural pattern of A
-			sparse_lu->analyzePattern(sparse_system->A); 
-			// Compute the numerical factorization 
-			sparse_lu->factorize(sparse_system->A); 
+			sparse_lu = new Eigen::SparseLU<Eigen::SparseMatrix<double>>(sparse_system->A);
 		} else {
 			logger.log(INFO, "LU_integrated_decompose: called with a dense system.");
 			lu = new Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>>(system->A);
@@ -30,7 +26,7 @@ namespace spic {
 		return true;
 	}
 
-	void Solver::LU_integrated_solve(Eigen::VectorXd &b)
+	void Solver::LU_integrated_solve(const Eigen::VectorXd &b)
 	{
 		if (options.sparse) {
 			if (!successful_decomposition || !sparse_lu) {
@@ -49,11 +45,7 @@ namespace spic {
 	{
 		if (options.sparse) {
 			logger.log(INFO, "cholesky_integrated_decompose: called with a sparse system.");
-			sparse_cholesky = new Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::COLAMDOrdering<int>>();
-			// Compute the ordering permutation vector from the structural pattern of A
-			sparse_cholesky->analyzePattern(sparse_system->A); 
-			// Compute the numerical factorization 
-			sparse_cholesky->factorize(sparse_system->A); 
+			sparse_cholesky = new Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::COLAMDOrdering<int>>(sparse_system->A);
 			if (sparse_cholesky->info() != Eigen::Success) {
 				logger.log(WARNING, "cholesky_integrated_decomposition(): failed, MNA System is not SPD.");
 				return false;
@@ -69,7 +61,7 @@ namespace spic {
 		return true;
 	}
 
-	void Solver::cholesky_integrated_solve(Eigen::VectorXd &b)
+	void Solver::cholesky_integrated_solve(const Eigen::VectorXd &b)
 	{
 
 		if (options.sparse) {
@@ -86,8 +78,13 @@ namespace spic {
 		}
 	}
 
-	static bool LU_custom_dense_decompose(Eigen::MatrixXd &A, int n, Eigen::VectorXi *perm, Logger logger)
+	bool Solver::LU_custom_decompose()
 	{
+		logger.log(INFO, "LU_custom_decompose(): called.");
+
+		Eigen::MatrixXd &A = system->A;
+		int n = system->n;
+
 		// Initialize permutation vector
 		for (int i = 0; i < n; i++) {
 			(*perm)(i) = i;
@@ -132,25 +129,7 @@ namespace spic {
 		return true;
 	}
 
-	static bool LU_custom_sparse_decompose(Eigen::SparseMatrix<double> &A, int n, Eigen::VectorXi *perm, Logger logger)
-	{
-		// Implement the LU decomposition without using Eigen's built-in functions with partial pivoting for SparseMatrices
-
-		return true;
-	}
-
-	bool Solver::LU_custom_decompose()
-	{
-		logger.log(INFO, "LU_custom_decompose(): called.");
-
-		if (options.sparse) {
-			return LU_custom_sparse_decompose(sparse_system->A, sparse_system->n, perm, logger);
-		} else {
-			return LU_custom_dense_decompose(system->A, system->n, perm, logger);
-		}
-	}
-
-	void Solver::LU_custom_solve(Eigen::VectorXd &b)
+	void Solver::LU_custom_solve(const Eigen::VectorXd &b)
 	{
 		if (!successful_decomposition || !perm) {
 			logger.log(ERROR, "LU_custom_solve(): called without a successful decomposition.");
@@ -208,7 +187,7 @@ namespace spic {
 		return true;
 	}
 
-	void Solver::cholesky_custom_solve(Eigen::VectorXd &b)
+	void Solver::cholesky_custom_solve(const Eigen::VectorXd &b)
 	{
 		if (!successful_decomposition) {
 			logger.log(ERROR, "cholesky_custom_solve(): called without a successful decomposition.");
@@ -243,31 +222,62 @@ namespace spic {
 	/* CG Method integrated compute */
 	void Solver::CG_integrated_compute()
 	{
-		logger.log(INFO, "CG_integrated_compute(): called.");
-		cg = new Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper>(system->A);
-		cg->setTolerance(options.itol);
+		if (options.sparse) {
+			logger.log(INFO, "CG_integrated_compute(): called with a sparse system.");
+			sparse_cg = new Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper>(sparse_system->A);
+			sparse_cg->setTolerance(options.itol);
+		} else {
+			logger.log(INFO, "CG_integrated_compute(): called with a dense system.");
+			cg = new Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper>(system->A);
+			cg->setTolerance(options.itol);
+		}
 	}
 
-	void Solver::CG_integrated_solve(Eigen::VectorXd &b)
+	void Solver::CG_integrated_solve(const Eigen::VectorXd &b)
 	{
-		system->x = cg->solveWithGuess(b, system->x);
-		// system->x = cg->solve(b);
-		iterations = cg->iterations();
-		error = cg->error();
+		if (options.sparse) {
+			sparse_system->x = sparse_cg->solveWithGuess(b, sparse_system->x);
+			iterations = sparse_cg->iterations();
+			error = sparse_cg->error();
+		} else {
+			system->x = cg->solveWithGuess(b, system->x);
+			iterations = cg->iterations();
+			error = cg->error();
+		}
 	}
-
 
 	/* CG Method custom compute*/
 	void Solver::CG_custom_compute()
 	{
 		logger.log(INFO, "CG_custom_compute(): called.");
 
-		// Calculate the diagonal matrix of preconditioner
-		inv_precond = new Eigen::VectorXd(system->n);
-		(*inv_precond) = system->A.diagonal().array().inverse();
+		if (options.sparse) {
+			// Calculate the diagonal matrix of preconditioner
+			inv_precond = new Eigen::VectorXd(sparse_system->n);
+			for (int k = 0; k < sparse_system->A.outerSize(); ++k) {
+				for (Eigen::SparseMatrix<double>::InnerIterator it(sparse_system->A, k); it; ++it) {
+					if (it.row() == it.col()) {
+						if (it.value() < EPS) {
+							(*inv_precond)[it.row()] = 1;
+						} else {
+							(*inv_precond)[it.row()] = 1.0 / it.value();
+						}
+					}
+				}
+			}
+		} else {
+			// Calculate the diagonal matrix of preconditioner
+			inv_precond = new Eigen::VectorXd(system->n);
+			(*inv_precond) = system->A.diagonal().array().inverse();
+			for (int i = 0; i < system->n; i++) {
+				if (system->A(i,i) < EPS) {
+					(*inv_precond)(i) = 1;
+				}
+			}
+		}
 	}
 
-	void Solver::CG_custom_solve(Eigen::VectorXd &b)
+	void Solver::CG_custom_solve(const Eigen::VectorXd &b)
 	{
 		if (!inv_precond) {
 			logger.log(ERROR, "CG_custom_solve(): called without a preconditioner.");
@@ -277,18 +287,25 @@ namespace spic {
 		int cg_iter = 0;
 		double alpha, beta, rho, rho1, cg_error = options.itol + 1;
 
-		Eigen::VectorXd r = b - system->A*system->x;
+		int n = (options.sparse) ? sparse_system->n : system->n;
+		Eigen::VectorXd &x = (options.sparse) ? sparse_system->x : system->x;
+		Eigen::VectorXd r;
+		if (options.sparse) {
+			r = b - sparse_system->A * x;
+		} else {
+			r = b - system->A * x;
+		}
 		Eigen::VectorXd z = r.cwiseProduct(*inv_precond);
-		Eigen::VectorXd p(system->n);
-		Eigen::VectorXd q(system->n);
+		Eigen::VectorXd p(n);
+		Eigen::VectorXd q(n);
 
 		double bnorm = b.norm();
 		if (bnorm < EPS) {
-			system->x.setZero();
+			x.setZero();
 			return;
 		}
 
-		while (cg_error > options.itol && cg_iter < system->n) {
+		while (cg_error > options.itol && cg_iter < n) {
 			cg_iter++;
 			z = r.cwiseProduct(*inv_precond); // subroutine
 			rho = r.dot(z);
@@ -300,9 +317,15 @@ namespace spic {
 				p = z + beta*p;
 			}
 			rho1 = rho;
-			q = system->A*p; // subroutine
+
+			if (options.sparse) { // subroutine
+				q = sparse_system->A*p;
+			} else {
+				q = system->A*p;
+			}
+			
 			alpha = rho / p.dot(q);
-			system->x += alpha*p;
+			x += alpha*p;
 			r -= alpha*q;
 
 			// Check for convergence
@@ -317,35 +340,62 @@ namespace spic {
 	/* BiCG Method integrated implementation */
 	void Solver::BiCG_integrated_compute()
 	{
-		logger.log(INFO, "BiCG_integrated_compute(): called.");
-		bicg = new Eigen::BiCGSTAB<Eigen::MatrixXd>(system->A);
-		bicg->setTolerance(options.itol);
+		if (options.sparse) {
+			logger.log(INFO, "BiCG_integrated_compute(): called with a sparse system.");
+			sparse_bicg = new Eigen::BiCGSTAB<Eigen::SparseMatrix<double>>(sparse_system->A);
+			sparse_bicg->setTolerance(options.itol);
+		} else {
+			logger.log(INFO, "BiCG_integrated_compute(): called with a dense system.");
+			bicg = new Eigen::BiCGSTAB<Eigen::MatrixXd>(system->A);
+			bicg->setTolerance(options.itol);
+		}
 	}
 
-	void Solver::BiCG_integrated_solve(Eigen::VectorXd &b)
+	void Solver::BiCG_integrated_solve(const Eigen::VectorXd &b)
 	{
-		system->x = bicg->solveWithGuess(b, system->x);
-		iterations = bicg->iterations();
-		error = bicg->error();
+		if (options.sparse) {
+			sparse_system->x = sparse_bicg->solveWithGuess(b, sparse_system->x);
+			iterations = sparse_bicg->iterations();
+			error = sparse_bicg->error();
+		} else {
+			system->x = bicg->solveWithGuess(b, system->x);
+			iterations = bicg->iterations();
+			error = bicg->error();
+		}
 	}
-
 
 	/* BiCG Method custom implementation */
 	void Solver::BiCG_custom_compute()
 	{
 		logger.log(INFO, "BiCG_custom_compute(): called.");
 
-		// Calculate the diagonal matrix of preconditioner
-		inv_precond = new Eigen::VectorXd(system->n);
-		(*inv_precond) = system->A.diagonal().array().inverse();
-		for (int i = 0; i < system->n; i++) {
-			if (system->A(i,i) < EPS) {
-				(*inv_precond)(i) = 1;
+		if (options.sparse) {
+			// Calculate the diagonal matrix of preconditioner
+			inv_precond = new Eigen::VectorXd(sparse_system->n);
+			for (int k = 0; k < sparse_system->A.outerSize(); ++k) {
+				for (Eigen::SparseMatrix<double>::InnerIterator it(sparse_system->A, k); it; ++it) {
+					if (it.row() == it.col()) {
+						if (it.value() < EPS) {
+							(*inv_precond)[it.row()] = 1;
+						} else {
+							(*inv_precond)[it.row()] = 1.0 / it.value();
+						}
+					}
+				}
+			}
+		} else {
+			// Calculate the diagonal matrix of preconditioner
+			inv_precond = new Eigen::VectorXd(system->n);
+			(*inv_precond) = system->A.diagonal().array().inverse();
+			for (int i = 0; i < system->n; i++) {
+				if (system->A(i,i) < EPS) {
+					(*inv_precond)(i) = 1;
+				}
 			}
 		}
 	}
 
-	bool Solver::BiCG_custom_solve(Eigen::VectorXd &b)
+	bool Solver::BiCG_custom_solve(const Eigen::VectorXd &b)
 	{
 		if (!inv_precond) {
 			logger.log(ERROR, "BiCG_custom_solve(): called without a preconditioner.");
@@ -354,20 +404,29 @@ namespace spic {
 
 		int bicg_iter = 0;
 		double alpha, beta, omega, rho, rho1, bicg_error = options.itol + 1;
-		Eigen::VectorXd r = b - system->A*system->x;
+
+		int n = (options.sparse) ? sparse_system->n : system->n;
+		Eigen::VectorXd &x = (options.sparse) ? sparse_system->x : system->x;
+		Eigen::VectorXd r;
+
+		if (options.sparse) {
+			r = b - sparse_system->A * x;
+		} else {
+			r = b - system->A * x;
+		}
 
 		Eigen::VectorXd r_tilda = r;
-		Eigen::VectorXd z(system->n), z_tilda(system->n);
-		Eigen::VectorXd p(system->n), p_tilda(system->n);
-		Eigen::VectorXd q(system->n), q_tilda(system->n);
+		Eigen::VectorXd z(n), z_tilda(n);
+		Eigen::VectorXd p(n), p_tilda(n);
+		Eigen::VectorXd q(n), q_tilda(n);
 
 		double bnorm = b.norm();
 		if (bnorm < EPS) {
-			system->x.setZero();
+			x.setZero();
 			return true;
 		}
 
-		while (bicg_error > options.itol && bicg_iter < system->n) {
+		while (bicg_error > options.itol && bicg_iter < n) {
 			bicg_iter++;
 			z = r.cwiseProduct(*inv_precond); // subroutine
 			z_tilda = r_tilda.cwiseProduct(*inv_precond); // subroutine
@@ -387,8 +446,13 @@ namespace spic {
 			}
 			rho1 = rho;
 
-			q = system->A*p; // subroutine
-			q_tilda = system->A.transpose()*p_tilda; // subroutine
+			if (options.sparse) {
+				q = sparse_system->A * p; // subroutine
+				q_tilda = sparse_system->A.transpose() * p_tilda; // subroutine
+			} else {
+				q = system->A * p;
+				q_tilda = system->A.transpose() * p_tilda;
+			}
 
 			omega = p_tilda.dot(q);
 			if (abs(omega) < EPS) {
@@ -396,7 +460,7 @@ namespace spic {
 			}
 
 			alpha = rho / omega;
-			system->x += alpha*p;
+			x += alpha*p;
 			r -= alpha*q;
 			r_tilda -= alpha*q_tilda;
 
@@ -481,7 +545,7 @@ namespace spic {
 	 *  - For iterative methods solve() must be called after compute()
 	 *  - For direct methods solve() must be called after decompose()
 	 */
-	void Solver::solve(Eigen::VectorXd &b)
+	void Solver::solve(const Eigen::VectorXd &b)
 	{
 		double start = omp_get_wtime();
 		bool res;

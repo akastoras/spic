@@ -60,9 +60,9 @@ namespace spic {
 		Netlist &netlist;
 		int total_nodes;
 
-		void add_resistor_stamp(std::vector<Eigen::Triplet<double>> triplets, node_id_t node_positive, node_id_t node_negative, float value);
+		void add_resistor_stamp(std::vector<Eigen::Triplet<double>> &triplets, node_id_t node_positive, node_id_t node_negative, float value);
 		void add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value);
-		void add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> triplets, node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value);
+		void add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> &triplets, node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value);
 	};
 }
 

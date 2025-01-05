@@ -121,7 +121,6 @@ namespace spic {
 				return false; // Element with the same name already exists
 			}
 			int size() {
-				// std::cout << "Hello world" << "\n";
 				return elements.size();
 			}
 		};

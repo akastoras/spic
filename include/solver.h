@@ -61,14 +61,16 @@ namespace spic {
 		union {
 			// LU
 			Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>> *lu;
-			Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> *sparse_lu;
+			Eigen::SparseLU<Eigen::SparseMatrix<double>> *sparse_lu;
 			// Cholesky
 			Eigen::LLT<Eigen::Ref<Eigen::MatrixXd>> *cholesky;
 			Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::COLAMDOrdering<int>> *sparse_cholesky;
 			// CG
 			Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper> *cg;
+			Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper> *sparse_cg;
 			// BiCG
 			Eigen::BiCGSTAB<Eigen::MatrixXd> *bicg;
+			Eigen::BiCGSTAB<Eigen::SparseMatrix<double>> *sparse_bicg;
 		};
 
 		struct {
@@ -86,14 +88,15 @@ namespace spic {
 		Solver(System &system, options_t &options, Logger &logger)
 			: Solver(&system, NULL, options, logger) {}
 
-		Solver(System *system, SparseSystem *sparse_system, options_t &options, Logger &logger)
+		Solver(System *arg_system, SparseSystem *arg_sparse_system, options_t &options, Logger &logger)
 			: options(options), logger(logger)
 		{
 			if (options.sparse) {
-				sparse_system = sparse_system;
+				sparse_system = arg_sparse_system;
 			} else {
-				system = system;
+				system = arg_system;
 			}
+
 			perf_counter.secs_in_decompose_calls = 0;
 			perf_counter.secs_in_compute_calls = 0;
 			perf_counter.secs_in_solve_calls = 0;
@@ -125,7 +128,7 @@ namespace spic {
 		~Solver() {}
 
 		/* Wrappers for decompose and solve */
-		void solve(Eigen::VectorXd &b);
+		void solve(const Eigen::VectorXd &b);
 		void dump_perf_counters(std::filesystem::path &filename, double g_time);
 
 		private:
@@ -134,82 +137,28 @@ namespace spic {
 
 		/* LU custom and integrated decompose and solve functions*/
 		bool LU_custom_decompose();
-		void LU_custom_solve(Eigen::VectorXd &b);
+		void LU_custom_solve(const Eigen::VectorXd &b);
 		bool LU_integrated_decompose();
-		void LU_integrated_solve(Eigen::VectorXd &b);
+		void LU_integrated_solve(const Eigen::VectorXd &b);
 
 		/* Cholesky custom and integrated decompose and solve functions*/
 		bool cholesky_integrated_decompose();
-		void cholesky_integrated_solve(Eigen::VectorXd &b);
+		void cholesky_integrated_solve(const Eigen::VectorXd &b);
 		bool cholesky_custom_decompose();
-		void cholesky_custom_solve(Eigen::VectorXd &b);
+		void cholesky_custom_solve(const Eigen::VectorXd &b);
 
 		/* Conjugate gradient custom and integrated solve functions */
 		void CG_integrated_compute();
-		void CG_integrated_solve(Eigen::VectorXd &b);
+		void CG_integrated_solve(const Eigen::VectorXd &b);
 		void CG_custom_compute();
-		void CG_custom_solve(Eigen::VectorXd &b);
+		void CG_custom_solve(const Eigen::VectorXd &b);
 
 		/* BiConjugate gradient custom and integrated solve functions */
 		void BiCG_integrated_compute();
-		void BiCG_integrated_solve(Eigen::VectorXd &b);
+		void BiCG_integrated_solve(const Eigen::VectorXd &b);
 		void BiCG_custom_compute();
-		bool BiCG_custom_solve(Eigen::VectorXd &b);
+		bool BiCG_custom_solve(const Eigen::VectorXd &b);
 	};
 }
 
 std::ostream& operator<<(std::ostream &out, const spic::options_t &options);
-
-// static bool LU_custom_sparse_decompose(Eigen::SparseMatrix<double> &A, int n, Eigen::VectorXi *perm, Logger logger)
-// {
-// 	// Initialize permutation vector
-// 	for (int i = 0; i < n; i++) {
-// 		(*perm)(i) = i;
-// 	}
-
-// 	for (int k = 0; k < n; k++) {
-// 		int pivot = k;
-// 		double max_val = 0.0;
-
-// 		// Find pivot row
-// 		for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
-// 			if (std::abs(it.value()) > max_val) {
-// 				max_val = std::abs(it.value());
-// 				pivot = it.row();
-// 			}
-// 		}
-
-// 		// Swap rows in A and permutation vector
-// 		if (pivot != k) {
-// 			for (int j = 0; j < A.outerSize(); ++j) {
-// 				std::swap(A.coeffRef(k, j), A.coeffRef(pivot, j));
-// 			}
-// 			std::swap((*perm)[k], (*perm)[pivot]);
-// 		}
-
-// 		// Check for singular matrix
-// 		if (A.coeff(k, k) == 0) {
-// 			logger.log(ERROR, "LU_custom_decompose(): Singular matrix in LU, cannot proceed.");
-// 			return false;
-// 		}
-
-// 		// Compute kth column of L matrix
-// 		for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
-// 			if (it.row() > k) {
-// 				it.valueRef() /= A.coeff(k, k);
-// 			}
-// 		}
-
-// 		// Update the rest of the matrix
-// 		for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
-// 			if (it.row() > k) {
-// 				for (Eigen::SparseMatrix<double>::InnerIterator jt(A, k); jt; ++jt) {
-// 					if (jt.col() > k) {
-// 						A.coeffRef(it.row(), jt.col()) -= it.value() * jt.value();
-// 					}
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return true;
-// }

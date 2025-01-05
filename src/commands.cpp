@@ -59,7 +59,9 @@ namespace spic {
 	// DCSweep::sweep function performs all the DC Sweeps, gets the results for the print nodes
 	// and stores them in corresponding files
 	void DCSweep::sweep(Solver *solver, std::vector<std::string> &prints, std::vector<std::string> &plots) {
-		Eigen::VectorXd b_new = solver->system->b;
+		Eigen::VectorXd &x = (solver->options.sparse) ? solver->sparse_system->x : solver->system->x;
+		Eigen::VectorXd b_new = (solver->options.sparse) ? solver->sparse_system->b : solver->system->b;
+
 		int voltage_src_id, matrix_src_id, current_src_id, current_pos_node, current_neg_node;
 		double current_src_value;
 
@@ -80,7 +82,7 @@ namespace spic {
 			current_pos_node = netlist.current_sources.elements[current_src_id].node_positive;
 			current_neg_node = netlist.current_sources.elements[current_src_id].node_negative;
 			current_src_value = netlist.current_sources.elements[current_src_id].value;
-			
+
 			// Remove old current source stamp from b_new
 			if (current_pos_node > 0) {
 				b_new(current_pos_node - 1) += current_src_value;
@@ -88,7 +90,7 @@ namespace spic {
 			if (current_neg_node > 0) {
 				b_new(current_neg_node - 1) -= current_src_value;
 			}
-			
+
 			// Add new current source stamp to b_new
 			if (current_pos_node > 0) {
 				b_new(current_pos_node - 1) -= start_value;
@@ -116,11 +118,10 @@ namespace spic {
 			// Store the source value for the current iteration
 			dc_sweep_src.push_back(src_value);
 
-			// Solve the system and keep the results for the print nodes
 			solver->solve(b_new);
 			for (auto &print_node : unique_vector) {
 				int node_id = node_table.find_node(&print_node) - 1;
-				dc_sweep_data[print_node].push_back(solver->system->x(node_id));
+				dc_sweep_data[print_node].push_back(x(node_id));
 			}
 
 			// Update the source value for the next iteration
