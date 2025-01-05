@@ -25,7 +25,7 @@ namespace spic {
 		DCSweep(type_t type, std::string &source_name, double start_value, double end_value, double step)
 			: type(type), source_name(source_name), start_value(start_value), end_value(end_value), step(step) {}
 	
-		void sweep(Solver &solver, std::vector<std::string> &prints, std::vector<std::string> &plots);
+		void sweep(Solver *solver, std::vector<std::string> &prints, std::vector<std::string> &plots);
 	};
 	
 	class Commands {
@@ -41,7 +41,7 @@ namespace spic {
 		Commands() { options = {0}; }
 		bool add_v_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
 		bool add_i_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
-		void perform_dc_sweeps(Solver &solver, Logger &logger);
+		void perform_dc_sweeps(Solver *solver, Logger &logger);
 	};
 }
 

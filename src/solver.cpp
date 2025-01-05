@@ -5,6 +5,8 @@
 #include <Eigen/LU>
 #include <Eigen/Cholesky>
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/SparseLU>
+#include <Eigen/SparseCholesky>	
 
 #include "system.h"
 #include "commands.h"
@@ -14,63 +16,89 @@
 namespace spic {
 	bool Solver::LU_integrated_decompose()
 	{
-		logger.log(INFO, "LU_integrated_decompose: called.");
-		// TODO: How to check if LU was successfull
-		// A matrix here is considered to be invertble and
-		// and to check that Eigen allows to use .isInvertible() method
-		// but only in FullPivLU. So we assume that the cirtuit matrices are invertible?
-		lu = new Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>>(system.A);
+		if (options.sparse) {
+			logger.log(INFO, "LU_integrated_decompose: called with a sparse system.");
+			sparse_lu = new Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>>();
+			// Compute the ordering permutation vector from the structural pattern of A
+			sparse_lu->analyzePattern(sparse_system->A); 
+			// Compute the numerical factorization 
+			sparse_lu->factorize(sparse_system->A); 
+		} else {
+			logger.log(INFO, "LU_integrated_decompose: called with a dense system.");
+			lu = new Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>>(system->A);
+		}
 		return true;
 	}
 
 	void Solver::LU_integrated_solve(Eigen::VectorXd &b)
 	{
-		if (!successful_decomposition || !lu) {
-			logger.log(ERROR, "LU_integrated_solve(): called without a decomposition.");
+		if (options.sparse) {
+			if (!successful_decomposition || !sparse_lu) {
+				logger.log(ERROR, "LU_integrated_solve(): called without a decomposition.");
+			}
+			sparse_system->x = sparse_lu->solve(b);
+		} else {
+			if (!successful_decomposition || !lu) {
+				logger.log(ERROR, "LU_integrated_solve(): called without a decomposition.");
+			}
+			system->x = lu->solve(b);
 		}
-		system.x = lu->solve(b);
 	}
 
 	bool Solver::cholesky_integrated_decompose()
 	{
-		logger.log(INFO, "cholesky_integrated_decompose called.");
-		cholesky = new Eigen::LLT<Eigen::Ref<Eigen::MatrixXd>>(system.A);
-		if (cholesky->info() != Eigen::Success) {
-			logger.log(WARNING, "cholesky_integrated_decomposition(): failed, MNA System is not SPD.");
-			return false;
+		if (options.sparse) {
+			logger.log(INFO, "cholesky_integrated_decompose: called with a sparse system.");
+			sparse_cholesky = new Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::COLAMDOrdering<int>>();
+			// Compute the ordering permutation vector from the structural pattern of A
+			sparse_cholesky->analyzePattern(sparse_system->A); 
+			// Compute the numerical factorization 
+			sparse_cholesky->factorize(sparse_system->A); 
+			if (sparse_cholesky->info() != Eigen::Success) {
+				logger.log(WARNING, "cholesky_integrated_decomposition(): failed, MNA System is not SPD.");
+				return false;
+			}
+		} else {
+			logger.log(INFO, "cholesky_integrated_decompose called with a dense system.");
+			cholesky = new Eigen::LLT<Eigen::Ref<Eigen::MatrixXd>>(system->A);
+			if (cholesky->info() != Eigen::Success) {
+				logger.log(WARNING, "cholesky_integrated_decomposition(): failed, MNA System is not SPD.");
+				return false;
+			}
 		}
 		return true;
 	}
 
 	void Solver::cholesky_integrated_solve(Eigen::VectorXd &b)
 	{
-		if (!successful_decomposition || cholesky->info() != Eigen::Success) {
-			logger.log(ERROR, "cholesky_integrated_solve(): called without a successful decomposition.");
-			return;
+
+		if (options.sparse) {
+			if (!successful_decomposition || sparse_cholesky->info() != Eigen::Success) {
+				logger.log(ERROR, "cholesky_integrated_solve(): called without a successful decomposition.");
+			}
+			sparse_system->x = sparse_cholesky->solve(b);
+		} else {
+			if (!successful_decomposition || cholesky->info() != Eigen::Success) {
+				logger.log(ERROR, "cholesky_integrated_solve(): called without a successful decomposition.");
+				return;
+			}
+			system->x = cholesky->solve(b);
 		}
-		system.x = cholesky->solve(b);
 	}
 
-
-	bool Solver::LU_custom_decompose()
+	static bool LU_custom_dense_decompose(Eigen::MatrixXd &A, int n, Eigen::VectorXi *perm, Logger logger)
 	{
-		logger.log(INFO, "LU_custom_decompose(): called.");
-
 		// Initialize permutation vector
-		perm = new Eigen::VectorXi(system.n);
-		Eigen::MatrixXd &A = system.A;
-
-		// Initialize permutation vector
-		for (int i = 0; i < system.n; i++) {
+		for (int i = 0; i < n; i++) {
 			(*perm)(i) = i;
 		}
 
-		for (int k = 0; k < system.n; k++) {
+		for (int k = 0; k < n; k++) {
 			int pivot = k;
 			double max_val = std::abs(A(k,k));
 
 			// Find pivot row
-			for (int i = k + 1; i < system.n; i++) {
+			for (int i = k + 1; i < n; i++) {
 				if (std::abs(A(i,k)) > max_val) {
 					max_val = A(i,k);
 					pivot = i;
@@ -90,18 +118,36 @@ namespace spic {
 			}
 
 			// Compute kth column of L matrix
-			for (int i = k + 1; i < system.n; i++) {
+			for (int i = k + 1; i < n; i++) {
 				A(i,k) /= A(k,k);
 			}
 
 			// Update the rest of the matrix
-			for (int i = k + 1; i < system.n; i++) {
-				for (int j = k + 1; j < system.n; j++) {
+			for (int i = k + 1; i < n; i++) {
+				for (int j = k + 1; j < n; j++) {
 					A(i,j) -= A(i,k)*A(k,j);
 				}
 			}
 		}
 		return true;
+	}
+
+	static bool LU_custom_sparse_decompose(Eigen::SparseMatrix<double> &A, int n, Eigen::VectorXi *perm, Logger logger)
+	{
+		// Implement the LU decomposition without using Eigen's built-in functions with partial pivoting for SparseMatrices
+
+		return true;
+	}
+
+	bool Solver::LU_custom_decompose()
+	{
+		logger.log(INFO, "LU_custom_decompose(): called.");
+
+		if (options.sparse) {
+			return LU_custom_sparse_decompose(sparse_system->A, sparse_system->n, perm, logger);
+		} else {
+			return LU_custom_dense_decompose(system->A, system->n, perm, logger);
+		}
 	}
 
 	void Solver::LU_custom_solve(Eigen::VectorXd &b)
@@ -111,11 +157,11 @@ namespace spic {
 			return;
 		}
 		// Storing y directly on x, since x's initial value will be y
-		Eigen::VectorXd &x = system.x;
-		Eigen::MatrixXd &A = system.A;
+		Eigen::VectorXd &x = system->x;
+		Eigen::MatrixXd &A = system->A;
 
 		// Forward substitution
-		for (int i = 0; i < system.n; i++) {
+		for (int i = 0; i < system->n; i++) {
 			x(i) = b((*perm)(i));
 			for (int j = 0; j < i; j++) {
 				x(i) -= A(i,j)*x(j);
@@ -124,8 +170,8 @@ namespace spic {
 		}
 
 		// Backward substitution
-		for (int i = system.n - 1; i >= 0; i--) {
-			for (int j = i + 1; j < system.n; j++) {
+		for (int i = system->n - 1; i >= 0; i--) {
+			for (int j = i + 1; j < system->n; j++) {
 				x(i) -= A(i,j)*x(j);
 			}
 			x(i) /= A(i,i);
@@ -135,10 +181,10 @@ namespace spic {
 	bool Solver::cholesky_custom_decompose()
 	{
 		logger.log(INFO, "cholesky_custom_decompose(): called.");
-		Eigen::MatrixXd &A = system.A;
+		Eigen::MatrixXd &A = system->A;
 		double squaredElement;
 
-		for (int k = 0; k < system.n; k++) {
+		for (int k = 0; k < system->n; k++) {
 			squaredElement = A(k,k) - A.row(k).head(k).squaredNorm();
 			if (squaredElement < 0) {
 				logger.log(ERROR, "cholesky_custom_decompose(): failed, MNA System is not SPD.");
@@ -153,7 +199,7 @@ namespace spic {
 				return false;
 			}
 
-			for (int i = k + 1; i < system.n; i++) {
+			for (int i = k + 1; i < system->n; i++) {
 				// Write only L matrix
 				A(i,k) = (A(i,k) - A.row(i).head(k).dot(A.row(k).head(k))) / A(k,k);
 			}
@@ -169,11 +215,11 @@ namespace spic {
 			return;
 		}
 		// Storing y directly on x, since x's initial value will be y
-		Eigen::VectorXd &x = system.x;
-		Eigen::MatrixXd &A = system.A;
+		Eigen::VectorXd &x = system->x;
+		Eigen::MatrixXd &A = system->A;
 
 		// Forward substitution
-		for (int i = 0; i < system.n; i++) {
+		for (int i = 0; i < system->n; i++) {
 			x(i) = b(i);
 			for (int j = 0; j < i; j++) {
 				x(i) -= A(i,j)*x(j);
@@ -182,8 +228,8 @@ namespace spic {
 		}
 
 		// Backward substitution
-		for (int i = system.n - 1; i >= 0; i--) {
-			for (int j = i + 1; j < system.n; j++) {
+		for (int i = system->n - 1; i >= 0; i--) {
+			for (int j = i + 1; j < system->n; j++) {
 				// Algorithmically, accessing A(i,j) is equivalent to A(j,i)
 				// since A is symmetric, and since we don't store L^T
 				// we access A(j,i) instead of A(i,j)
@@ -198,14 +244,14 @@ namespace spic {
 	void Solver::CG_integrated_compute()
 	{
 		logger.log(INFO, "CG_integrated_compute(): called.");
-		cg = new Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper>(system.A);
+		cg = new Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper>(system->A);
 		cg->setTolerance(options.itol);
 	}
 
 	void Solver::CG_integrated_solve(Eigen::VectorXd &b)
 	{
-		system.x = cg->solveWithGuess(b, system.x);
-		// system.x = cg->solve(b);
+		system->x = cg->solveWithGuess(b, system->x);
+		// system->x = cg->solve(b);
 		iterations = cg->iterations();
 		error = cg->error();
 	}
@@ -217,8 +263,8 @@ namespace spic {
 		logger.log(INFO, "CG_custom_compute(): called.");
 
 		// Calculate the diagonal matrix of preconditioner
-		inv_precond = new Eigen::VectorXd(system.n);
-		(*inv_precond) = system.A.diagonal().array().inverse();
+		inv_precond = new Eigen::VectorXd(system->n);
+		(*inv_precond) = system->A.diagonal().array().inverse();
 	}
 
 	void Solver::CG_custom_solve(Eigen::VectorXd &b)
@@ -231,18 +277,18 @@ namespace spic {
 		int cg_iter = 0;
 		double alpha, beta, rho, rho1, cg_error = options.itol + 1;
 
-		Eigen::VectorXd r = b - system.A*system.x;
+		Eigen::VectorXd r = b - system->A*system->x;
 		Eigen::VectorXd z = r.cwiseProduct(*inv_precond);
-		Eigen::VectorXd p(system.n);
-		Eigen::VectorXd q(system.n);
+		Eigen::VectorXd p(system->n);
+		Eigen::VectorXd q(system->n);
 
 		double bnorm = b.norm();
 		if (bnorm < EPS) {
-			system.x.setZero();
+			system->x.setZero();
 			return;
 		}
 
-		while (cg_error > options.itol && cg_iter < system.n) {
+		while (cg_error > options.itol && cg_iter < system->n) {
 			cg_iter++;
 			z = r.cwiseProduct(*inv_precond); // subroutine
 			rho = r.dot(z);
@@ -254,9 +300,9 @@ namespace spic {
 				p = z + beta*p;
 			}
 			rho1 = rho;
-			q = system.A*p; // subroutine
+			q = system->A*p; // subroutine
 			alpha = rho / p.dot(q);
-			system.x += alpha*p;
+			system->x += alpha*p;
 			r -= alpha*q;
 
 			// Check for convergence
@@ -272,13 +318,13 @@ namespace spic {
 	void Solver::BiCG_integrated_compute()
 	{
 		logger.log(INFO, "BiCG_integrated_compute(): called.");
-		bicg = new Eigen::BiCGSTAB<Eigen::MatrixXd>(system.A);
+		bicg = new Eigen::BiCGSTAB<Eigen::MatrixXd>(system->A);
 		bicg->setTolerance(options.itol);
 	}
 
 	void Solver::BiCG_integrated_solve(Eigen::VectorXd &b)
 	{
-		system.x = bicg->solveWithGuess(b, system.x);
+		system->x = bicg->solveWithGuess(b, system->x);
 		iterations = bicg->iterations();
 		error = bicg->error();
 	}
@@ -290,10 +336,10 @@ namespace spic {
 		logger.log(INFO, "BiCG_custom_compute(): called.");
 
 		// Calculate the diagonal matrix of preconditioner
-		inv_precond = new Eigen::VectorXd(system.n);
-		(*inv_precond) = system.A.diagonal().array().inverse();
-		for (int i = 0; i < system.n; i++) {
-			if (system.A(i,i) < EPS) {
+		inv_precond = new Eigen::VectorXd(system->n);
+		(*inv_precond) = system->A.diagonal().array().inverse();
+		for (int i = 0; i < system->n; i++) {
+			if (system->A(i,i) < EPS) {
 				(*inv_precond)(i) = 1;
 			}
 		}
@@ -308,20 +354,20 @@ namespace spic {
 
 		int bicg_iter = 0;
 		double alpha, beta, omega, rho, rho1, bicg_error = options.itol + 1;
-		Eigen::VectorXd r = b - system.A*system.x;
+		Eigen::VectorXd r = b - system->A*system->x;
 
 		Eigen::VectorXd r_tilda = r;
-		Eigen::VectorXd z(system.n), z_tilda(system.n);
-		Eigen::VectorXd p(system.n), p_tilda(system.n);
-		Eigen::VectorXd q(system.n), q_tilda(system.n);
+		Eigen::VectorXd z(system->n), z_tilda(system->n);
+		Eigen::VectorXd p(system->n), p_tilda(system->n);
+		Eigen::VectorXd q(system->n), q_tilda(system->n);
 
 		double bnorm = b.norm();
 		if (bnorm < EPS) {
-			system.x.setZero();
+			system->x.setZero();
 			return true;
 		}
 
-		while (bicg_error > options.itol && bicg_iter < system.n) {
+		while (bicg_error > options.itol && bicg_iter < system->n) {
 			bicg_iter++;
 			z = r.cwiseProduct(*inv_precond); // subroutine
 			z_tilda = r_tilda.cwiseProduct(*inv_precond); // subroutine
@@ -341,8 +387,8 @@ namespace spic {
 			}
 			rho1 = rho;
 
-			q = system.A*p; // subroutine
-			q_tilda = system.A.transpose()*p_tilda; // subroutine
+			q = system->A*p; // subroutine
+			q_tilda = system->A.transpose()*p_tilda; // subroutine
 
 			omega = p_tilda.dot(q);
 			if (abs(omega) < EPS) {
@@ -350,7 +396,7 @@ namespace spic {
 			}
 
 			alpha = rho / omega;
-			system.x += alpha*p;
+			system->x += alpha*p;
 			r -= alpha*q;
 			r_tilda -= alpha*q_tilda;
 

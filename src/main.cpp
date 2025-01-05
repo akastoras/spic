@@ -30,7 +30,7 @@ namespace po = boost::program_options;
 /* Wrapper functions for spic stages of execution */
 void parse_arguments(po::variables_map &vm, int argc, char** argv);
 void parse_spice_file(std::filesystem::path cir_file, Logger &logger);
-void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
+void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorXd &b,
 	const std::filesystem::path &output_dir, const std::string &output_dir_str,
 	const std::filesystem::path &cir_file, const std::string &cir_file_str,
 	bool bypass_options, Logger &logger);
@@ -76,17 +76,25 @@ int main(int argc, char** argv)
 	int max_threads = omp_get_max_threads();
 	logger.log(INFO, "Using " + std::to_string(max_threads) + " threads.");
 	Eigen::setNbThreads(max_threads);
+	spic::Solver *slv;
 
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
-	spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
-
-	// Construct a Solver object
-	spic::Solver slv = spic::Solver(system, commands.options, logger);
-
-	// Solve on the operating point
-	solve_operating_point(slv, system, output_dir, output_dir_str,
-						cir_file, cir_file_str, bypass_options, logger);
+	if (!commands.options.sparse) {
+		spic::MNASystemDC system = spic::MNASystemDC(netlist, node_table.size());
+		// Construct a Solver object
+		slv = new spic::Solver(system, commands.options, logger);
+		// Solve on the operating point
+		solve_operating_point(slv, system.x, system.b, output_dir, output_dir_str,
+							cir_file, cir_file_str, bypass_options, logger);
+	} else {
+		spic::MNASparseSystemDC system = spic::MNASparseSystemDC(netlist, node_table.size());
+		// Construct a Solver object
+		slv = new spic::Solver(system, commands.options, logger);
+		// Solve on the operating point
+		solve_operating_point(slv, system.x, system.b, output_dir, output_dir_str,
+							cir_file, cir_file_str, bypass_options, logger);
+	}
 
 	// Perform the dc sweeps (if there are any)
 	if (!disable_dc_sweeps) {
@@ -99,7 +107,7 @@ int main(int argc, char** argv)
 	std::filesystem::path perf_rpt = output_dir/"spic_performance.rpt";
 	double g_total_time = omp_get_wtime() - g_timer_start;
 	logger.log(INFO, "spic execution time was " + std::to_string(g_total_time));
-	slv.dump_perf_counters(perf_rpt, g_total_time);
+	slv->dump_perf_counters(perf_rpt, g_total_time);
 
 	logger.log(INFO, "Simulator finished. Exiting...");
 	return 0;
@@ -169,13 +177,13 @@ void parse_spice_file(std::filesystem::path cir_file, Logger &logger) {
 	std::cout << netlist;
 }
 
-void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
+void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorXd &b,
 	const std::filesystem::path &output_dir, const std::string &output_dir_str,
 	const std::filesystem::path &cir_file, const std::string &cir_file_str,
 	bool bypass_options, Logger &logger)
 {
 	// Solve MNA system on the operating point
-	slv.solve(system.b);
+	slv->solve(b);
 
 	// Delete output_dir if it exists and then create it again
 	if (std::filesystem::exists(output_dir)) {
@@ -236,7 +244,7 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 		if (it.first != "0") {
 			file << it.first << " "
 				 << std::setprecision(std::numeric_limits<double>::max_digits10)
-				 << system.x[it.second - 1] << std::endl;
+				 << x[it.second - 1] << std::endl;
 		}
 	}
 
@@ -247,12 +255,12 @@ void solve_operating_point(spic::Solver &slv, spic::MNASystemDC &system,
 	file << std::endl << "Source Current" << std::endl;
 	for (int i = 0; i < total_voltage_sources; i++) {
 		file << "V" << netlist.voltage_sources.elements[i].name
-			 << " " << system.x[total_nodes - 1 + i] << std::endl;
+			 << " " << x[total_nodes - 1 + i] << std::endl;
 	}
 
 	for (int i = 0; i < total_inductors; i++) {
 		file << "L" << netlist.inductors.elements[i].name
-			 << " " << system.x[total_nodes - 1 + total_voltage_sources + i] << std::endl;
+			 << " " << x[total_nodes - 1 + total_voltage_sources + i] << std::endl;
 	}
 
 	file.close();

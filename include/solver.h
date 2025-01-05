@@ -6,6 +6,8 @@
 #include <Eigen/LU>
 #include <Eigen/Cholesky>
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/SparseLU>
+#include <Eigen/SparseCholesky>
 
 #include "system.h"
 #include "util.h"
@@ -30,7 +32,13 @@ namespace spic {
 
 		/* References to global spic stuff */
 		options_t &options;
-		System &system;
+		
+		/* Pointer to dense/sparse system */
+		union {
+			System *system;
+			SparseSystem *sparse_system;
+		};
+		
 		Logger &logger;
 
 		// Algorithm specific variables
@@ -51,9 +59,15 @@ namespace spic {
 		};
 
 		union {
+			// LU
 			Eigen::PartialPivLU<Eigen::Ref<Eigen::MatrixXd>> *lu;
+			Eigen::SparseLU<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> *sparse_lu;
+			// Cholesky
 			Eigen::LLT<Eigen::Ref<Eigen::MatrixXd>> *cholesky;
+			Eigen::SimplicialLLT<Eigen::SparseMatrix<double>, Eigen::Lower, Eigen::COLAMDOrdering<int>> *sparse_cholesky;
+			// CG
 			Eigen::ConjugateGradient<Eigen::MatrixXd, Eigen::Lower|Eigen::Upper> *cg;
+			// BiCG
 			Eigen::BiCGSTAB<Eigen::MatrixXd> *bicg;
 		};
 
@@ -66,9 +80,20 @@ namespace spic {
 			int compute_calls;
 		} perf_counter;
 
+		Solver(SparseSystem &sparse_system, options_t &options, Logger &logger)
+			: Solver(NULL, &sparse_system, options, logger) {}
+
 		Solver(System &system, options_t &options, Logger &logger)
-			: system(system), options(options), logger(logger)
+			: Solver(&system, NULL, options, logger) {}
+
+		Solver(System *system, SparseSystem *sparse_system, options_t &options, Logger &logger)
+			: options(options), logger(logger)
 		{
+			if (options.sparse) {
+				sparse_system = sparse_system;
+			} else {
+				system = system;
+			}
 			perf_counter.secs_in_decompose_calls = 0;
 			perf_counter.secs_in_compute_calls = 0;
 			perf_counter.secs_in_solve_calls = 0;
@@ -134,3 +159,57 @@ namespace spic {
 }
 
 std::ostream& operator<<(std::ostream &out, const spic::options_t &options);
+
+// static bool LU_custom_sparse_decompose(Eigen::SparseMatrix<double> &A, int n, Eigen::VectorXi *perm, Logger logger)
+// {
+// 	// Initialize permutation vector
+// 	for (int i = 0; i < n; i++) {
+// 		(*perm)(i) = i;
+// 	}
+
+// 	for (int k = 0; k < n; k++) {
+// 		int pivot = k;
+// 		double max_val = 0.0;
+
+// 		// Find pivot row
+// 		for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
+// 			if (std::abs(it.value()) > max_val) {
+// 				max_val = std::abs(it.value());
+// 				pivot = it.row();
+// 			}
+// 		}
+
+// 		// Swap rows in A and permutation vector
+// 		if (pivot != k) {
+// 			for (int j = 0; j < A.outerSize(); ++j) {
+// 				std::swap(A.coeffRef(k, j), A.coeffRef(pivot, j));
+// 			}
+// 			std::swap((*perm)[k], (*perm)[pivot]);
+// 		}
+
+// 		// Check for singular matrix
+// 		if (A.coeff(k, k) == 0) {
+// 			logger.log(ERROR, "LU_custom_decompose(): Singular matrix in LU, cannot proceed.");
+// 			return false;
+// 		}
+
+// 		// Compute kth column of L matrix
+// 		for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
+// 			if (it.row() > k) {
+// 				it.valueRef() /= A.coeff(k, k);
+// 			}
+// 		}
+
+// 		// Update the rest of the matrix
+// 		for (Eigen::SparseMatrix<double>::InnerIterator it(A, k); it; ++it) {
+// 			if (it.row() > k) {
+// 				for (Eigen::SparseMatrix<double>::InnerIterator jt(A, k); jt; ++jt) {
+// 					if (jt.col() > k) {
+// 						A.coeffRef(it.row(), jt.col()) -= it.value() * jt.value();
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return true;
+// }

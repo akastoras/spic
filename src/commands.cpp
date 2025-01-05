@@ -58,8 +58,8 @@ namespace spic {
 
 	// DCSweep::sweep function performs all the DC Sweeps, gets the results for the print nodes
 	// and stores them in corresponding files
-	void DCSweep::sweep(Solver &solver, std::vector<std::string> &prints, std::vector<std::string> &plots) {
-		Eigen::VectorXd b_new = solver.system.b;
+	void DCSweep::sweep(Solver *solver, std::vector<std::string> &prints, std::vector<std::string> &plots) {
+		Eigen::VectorXd b_new = solver->system->b;
 		int voltage_src_id, matrix_src_id, current_src_id, current_pos_node, current_neg_node;
 		double current_src_value;
 
@@ -117,10 +117,10 @@ namespace spic {
 			dc_sweep_src.push_back(src_value);
 
 			// Solve the system and keep the results for the print nodes
-			solver.solve(b_new);
+			solver->solve(b_new);
 			for (auto &print_node : unique_vector) {
 				int node_id = node_table.find_node(&print_node) - 1;
-				dc_sweep_data[print_node].push_back(solver.system.x(node_id));
+				dc_sweep_data[print_node].push_back(solver->system->x(node_id));
 			}
 
 			// Update the source value for the next iteration
@@ -153,13 +153,13 @@ namespace spic {
 			std::string image_file = plot_file;
 			image_file.erase(plot_file.find(".dat"), std::string::npos);
 			std::string plot_command = "gnuplot -e \"set terminal png; set output '" + image_file + ".png'; plot '" + plot_file + "' with lines title 'V(" + plot_node + ") vs " + source_name + "\"";
-			solver.logger.log(INFO, plot_command);
+			solver->logger.log(INFO, plot_command);
 			std::system(plot_command.c_str());
 		}
 	}
 
 	// Commands::perform_dc_sweeps function performs all the DC Sweeps
-	void Commands::perform_dc_sweeps(Solver &solver, Logger &logger) {
+	void Commands::perform_dc_sweeps(Solver *solver, Logger &logger) {
 		// Delete dc_sweeps_dir if it exists and then create it again
 		if (std::filesystem::exists(dc_sweeps_dir)) {
 			logger.log(WARNING, std::string(dc_sweeps_dir) + " exists... removing it");
