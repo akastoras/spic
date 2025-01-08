@@ -34,6 +34,7 @@ void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorX
 	const std::filesystem::path &output_dir, const std::string &output_dir_str,
 	const std::filesystem::path &cir_file, const std::string &cir_file_str,
 	bool bypass_options, Logger &logger);
+bool check_conflicting_options(spic::options_t &options, Logger log);
 
 int main(int argc, char** argv)
 {
@@ -71,6 +72,12 @@ int main(int argc, char** argv)
 
 	// Show final commands
 	std::cout << commands;
+
+	// Check if the combination of options is valid
+	if (!check_conflicting_options(commands.options, logger)) {
+		exit(1);
+	}
+
 
 	// Initialize Parallelism in Eigen
 	int max_threads = omp_get_max_threads();
@@ -265,4 +272,14 @@ void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorX
 	}
 
 	file.close();
+}
+
+bool check_conflicting_options(spic::options_t &options, Logger logger)
+{
+	bool res = true;
+	if (options.sparse && !options.iter && options.custom) {
+		logger.log(ERROR, "Custom direct methods are not implemented for sparse matrices");
+		res = false;
+	}
+	return res;
 }

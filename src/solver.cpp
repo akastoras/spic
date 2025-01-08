@@ -254,12 +254,11 @@ namespace spic {
 		if (options.sparse) {
 			// Calculate the diagonal matrix of preconditioner
 			inv_precond = new Eigen::VectorXd(sparse_system->n);
+			inv_precond->setOnes();
 			for (int k = 0; k < sparse_system->A.outerSize(); ++k) {
 				for (Eigen::SparseMatrix<double>::InnerIterator it(sparse_system->A, k); it; ++it) {
 					if (it.row() == it.col()) {
-						if (it.value() < EPS) {
-							(*inv_precond)[it.row()] = 1;
-						} else {
+						if (it.value() >= EPS) {
 							(*inv_precond)[it.row()] = 1.0 / it.value();
 						}
 					}
@@ -295,7 +294,7 @@ namespace spic {
 		} else {
 			r = b - system->A * x;
 		}
-		Eigen::VectorXd z = r.cwiseProduct(*inv_precond);
+		Eigen::VectorXd z(n);
 		Eigen::VectorXd p(n);
 		Eigen::VectorXd q(n);
 
@@ -372,12 +371,11 @@ namespace spic {
 		if (options.sparse) {
 			// Calculate the diagonal matrix of preconditioner
 			inv_precond = new Eigen::VectorXd(sparse_system->n);
+			inv_precond->setOnes();
 			for (int k = 0; k < sparse_system->A.outerSize(); ++k) {
 				for (Eigen::SparseMatrix<double>::InnerIterator it(sparse_system->A, k); it; ++it) {
 					if (it.row() == it.col()) {
-						if (it.value() < EPS) {
-							(*inv_precond)[it.row()] = 1;
-						} else {
+						if (it.value() >= EPS) {
 							(*inv_precond)[it.row()] = 1.0 / it.value();
 						}
 					}
@@ -427,6 +425,7 @@ namespace spic {
 		}
 
 		while (bicg_error > options.itol && bicg_iter < n) {
+
 			bicg_iter++;
 			z = r.cwiseProduct(*inv_precond); // subroutine
 			z_tilda = r_tilda.cwiseProduct(*inv_precond); // subroutine
