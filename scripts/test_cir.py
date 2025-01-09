@@ -19,6 +19,7 @@ def get_version_name(custom, sparse, iter_solver, version_num):
 def main():
 	parser = argparse.ArgumentParser(description="Run spic with circuit file and process output to make csv with errors.")
 	parser.add_argument("--cir_file", help="Path to the circuit file", default=None)
+	parser.add_argument("--tests_dir", help="Path to the tests_dir", default=None)
 	parser.add_argument("--spd", 	action='store_true', help="Enable SPD matrix option")
 	parser.add_argument("--custom",	action='store_true', help="Enable custom solver option")
 	parser.add_argument("--sparse", action='store_true', help='Enable sparse matrix option')
@@ -26,8 +27,10 @@ def main():
 	parser.add_argument("--itol", help="Set iteration tolernace", default="1e-3")
 	parser.add_argument("--disable_dc_sweeps",	action='store_true', help="Disable DC Sweeps")
 	parser.add_argument("--version", help="Version of evaluation", default="0")
-
+	
 	args = parser.parse_args()
+	
+	tests_dir = args.tests_dir
 	cir_file = args.cir_file
 	spd = args.spd
 	custom = args.custom
@@ -55,12 +58,12 @@ def main():
 
 	test_name = cir_file.removesuffix(".cir").split("/")[-1]
 	spic_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-	golden_dir = os.path.join(spic_dir, "tests/golden", test_name + "_golden")
-	output_dir = os.path.join(spic_dir, "tests/output", version, test_name + "_output")
-	csv_file = os.path.join(spic_dir, "tests/eval", version, test_name + ".csv")
+	golden_dir = os.path.join(spic_dir, tests_dir, "golden", test_name + "_golden")
+	output_dir = os.path.join(spic_dir, tests_dir, "output", version, test_name + "_output")
+	csv_file = os.path.join(spic_dir, tests_dir, "eval", version, test_name + ".csv")
 	spic_bin = os.path.join(spic_dir, "build/spic")
 
-	os.makedirs(os.path.join(spic_dir, "tests/eval", version), exist_ok=True)
+	os.makedirs(os.path.join(spic_dir, tests_dir, "eval", version), exist_ok=True)
 
 	if not os.path.isfile(cir_file):
 		raise Exception(f"Not a file: {cir_file}")

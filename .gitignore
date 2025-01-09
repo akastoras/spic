@@ -17,3 +17,7 @@ tests/golden/
 tests/output/
 	
 .~lock.*
+
+tests/ibm/*.cir
+tests/ibm/output/
+tests/ibm/golden/

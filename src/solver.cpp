@@ -333,6 +333,9 @@ namespace spic {
 
 		iterations = cg_iter;
 		error = cg_error;
+
+		// Values lower than itol should be considered as 0
+		prune_output_vector();
 	}
 
 
@@ -468,6 +471,10 @@ namespace spic {
 
 		iterations = bicg_iter;
 		error = bicg_error;
+
+		// Values lower than itol should be considered as 0
+		prune_output_vector();
+		
 		return true;
 	}
 
@@ -594,6 +601,20 @@ namespace spic {
 
 		perf_counter.secs_in_solve_calls += omp_get_wtime() - start;
 		perf_counter.solve_calls++;
+	}
+	
+	/* Make values less than the specified tolerance equal to zero */ 
+	void Solver::prune_output_vector()
+	{
+		Eigen::VectorXd &x = (options.sparse) ? sparse_system->x : system->x;
+
+		assert(options.iter == true);
+
+		for (int i = 0; i < system->n; i++) {
+			if (std::abs(x(i)) < options.itol) {
+				x(i) = 0;
+			}
+		}
 	}
 
 	/* Dump performance counters to a file */

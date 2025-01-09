@@ -131,6 +131,8 @@ namespace spic {
 		void solve(const Eigen::VectorXd &b);
 		void dump_perf_counters(std::filesystem::path &filename, double g_time);
 
+
+		/* All functions except the constructor, solve and dump_performance_counters are private */
 		private:
 		bool decompose();
 		void compute();
@@ -158,6 +160,10 @@ namespace spic {
 		void BiCG_integrated_solve(const Eigen::VectorXd &b);
 		void BiCG_custom_compute();
 		bool BiCG_custom_solve(const Eigen::VectorXd &b);
+
+		/* Helper functions */
+		void prune_output_vector();
+
 	};
 }
 
