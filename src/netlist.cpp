@@ -1,5 +1,6 @@
 #include <ostream>
 #include <algorithm>
+#include <cassert>
 
 #include "netlist.h"
 #include "node_table.h"
@@ -36,6 +37,9 @@ std::ostream& operator<<(std::ostream &out, spic::VoltageSource &v) {
 	out << "\t+ Node: "                  << v.node_positive << " (" << node_table.get_node_name(v.node_positive) << ")" << std::endl;
 	out << "\t- Node: "                  << v.node_negative << " (" << node_table.get_node_name(v.node_negative) << ")" << std::endl;
 	out << "\tValue: "                   << v.value << std::endl;
+	if (v.transient_specs) {
+		out << "\tTransient Specs: " << *v.transient_specs << std::endl;
+	}
 	return out;
 }
 
@@ -45,6 +49,9 @@ std::ostream& operator<<(std::ostream &out, spic::CurrentSource &i) {
 	out << "\t+ Node: "                  << i.node_positive << " (" << node_table.get_node_name(i.node_positive) << ")" << std::endl;
 	out << "\t- Node: "                  << i.node_negative << " (" << node_table.get_node_name(i.node_negative) << ")" << std::endl;
 	out << "\tValue: "                   << i.value << std::endl;
+	if (i.transient_specs) {
+		out << "\tTransient Specs: " << *i.transient_specs << std::endl;
+	}
 	return out;
 }
 
@@ -115,25 +122,25 @@ std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
 	if (!nl.voltage_sources.elements.empty()) {
 		out << nl.voltage_sources << std::endl;
 	}
-	if (!nl.current_sources.empty()) {
+	if (!nl.current_sources.elements.empty()) {
 		out << nl.current_sources << std::endl;
 	}
-	if (!nl.resistors.empty()) {
+	if (!nl.resistors.elements.empty()) {
 		out << nl.resistors       << std::endl;
 	}
-	if (!nl.capacitors.empty()) {
+	if (!nl.capacitors.elements.empty()) {
 		out << nl.capacitors      << std::endl;
 	}
-	if (!nl.inductors.empty()) {
+	if (!nl.inductors.elements.empty()) {
 		out << nl.inductors       << std::endl;
 	}
-	if (!nl.diodes.empty()) {
+	if (!nl.diodes.elements.empty()) {
 		out << nl.diodes          << std::endl;
 	}
-	if (!nl.mos.empty()) {
+	if (!nl.mos.elements.empty()) {
 		out << nl.mos             << std::endl;
 	}
-	if (!nl.bjt.empty()) {
+	if (!nl.bjt.elements.empty()) {
 		out << nl.bjt             << std::endl;
 	}
 #endif

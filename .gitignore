@@ -21,3 +21,9 @@ tests/output/
 tests/ibm/*.cir
 tests/ibm/output/
 tests/ibm/golden/
+
+tests/course/*.cir
+tests/course/output/
+tests/course/golden/
+
+*.solution

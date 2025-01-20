@@ -15,12 +15,15 @@
 #define EPS 1e-23
 
 namespace spic {
+	typedef enum { BE, TR } transient_method_t;
+
 	typedef struct options {
 		bool custom; // Enable usage of custom implementations
 		bool spd; // If iter=false: Enable cholesky decomp, else: Enable conjugate gradient
 		bool iter; // Enables iterative methods (conjugate gradient & biconjugate gradient)
 		bool sparse; // Enables the usage of sparse matrices
 		double itol; // The convergence threshold for iterative methods
+		transient_method_t transient_method; // Method for calculatg derivative in Transient Analysis
 	} options_t;
 
 	class Solver {

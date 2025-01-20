@@ -37,29 +37,33 @@ namespace spic {
 		}
 	};
 
-	class MNASystemDC : public System {
+	class MNASystem : public System {
 		public:
-		MNASystemDC(Netlist &netlist, int total_nodes);
-		MNASystemDC(Netlist &netlist, int total_nodes, int dim);
+		MNASystem(Netlist &netlist, int total_nodes);
+		MNASystem(Netlist &netlist, int total_nodes, int dim);
 
 		private:
 		Netlist &netlist;
 		int total_nodes;
 
+		void create_dc_system();
 		void add_resistor_stamp(node_id_t node_positive, node_id_t node_negative, float value);
 		void add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value);
 		void add_voltage_source_stamp(node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value);
+
+		void create_trans_system();
 	};
 
-	class MNASparseSystemDC : public SparseSystem {
+	class MNASparseSystem : public SparseSystem {
 		public:
-		MNASparseSystemDC(Netlist &netlist, int total_nodes);
-		MNASparseSystemDC(Netlist &netlist, int total_nodes, int dim);
+		MNASparseSystem(Netlist &netlist, int total_nodes);
+		MNASparseSystem(Netlist &netlist, int total_nodes, int dim);
 
 		private:
 		Netlist &netlist;
 		int total_nodes;
 
+		void create_dc_sparse_system();
 		void add_resistor_stamp(std::vector<Eigen::Triplet<double>> &triplets, node_id_t node_positive, node_id_t node_negative, float value);
 		void add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value);
 		void add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> &triplets, node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value);

@@ -26,45 +26,56 @@
 %define parse.error verbose
 
 %union	{
-	int						 intval;
-	float					 floatval;
-	std::string				 *strval;
-	spic::VoltageSource		 *voltage_source;
-	spic::CurrentSource 	 *current_source;
-	spic::Resistor 			 *resistor;
-	spic::Capacitor 		 *capacitor;
-	spic::Inductor 			 *Inductor;
-	spic::Diode				 *diode;
-	spic::MOS				 *mos_transistor;
-	spic::BJT				 *bj_transistor;
+	int					intval;
+	float				floatval;
+	std::string			*strval;
+	spic::VoltageSource	*voltage_source;
+	spic::CurrentSource *current_source;
+	spic::Resistor 		*resistor;
+	spic::Capacitor 	*capacitor;
+	spic::Inductor 		*Inductor;
+	spic::Diode			*diode;
+	spic::MOS			*mos_transistor;
+	spic::BJT			*bj_transistor;
+	spic::TransientSpecs		*tran_spec;
+	std::vector<std::pair<float, float>> *pwl_pairs;
 }
 
 //  optional required  optional  optional
 // %token    <type>    <name>    <number>  "description"
 
-%token	<strval> T_V	"Voltage Source"
-%token	<strval> T_I	"Current Source"
-%token	<strval> T_R	"Resistor"
-%token	<strval> T_C	"Capacitor"
-%token	<strval> T_L	"Inductor"
-%token	<strval> T_D	"Diode"
-%token	<strval> T_M	"MOS Transistor"
-%token	<strval> T_Q	"BJT Transistor"
+%token <strval> T_V	"Voltage Source"
+%token <strval> T_I	"Current Source"
+%token <strval> T_R	"Resistor"
+%token <strval> T_C	"Capacitor"
+%token <strval> T_L	"Inductor"
+%token <strval> T_D	"Diode"
+%token <strval> T_M	"MOS Transistor"
+%token <strval> T_Q	"BJT Transistor"
 
-%token	T_LENGTH	"MOS Length"
-%token	T_WIDTH		"MOS Width"
-%token	T_AREA		"Area Factor of BJT/Diode"
-%token	T_MINUS		"Minus Operator"
-%token	T_PLUS		"Plus Operator"
-%token	T_OPTIONS	".OPTIONS"
-%token	T_SPD		"MNA static matrix is SPD"
-%token	T_CUSTOM	"MNA system should be solved with custom solver"
-%token	T_ITER		"MNA system should be solved with iterative method"
-%token	T_SPARSE	"Sparse matrix option"
-%token	T_ITOL		"MNA sytem should be solved with defined tolerance when using iterative methods"
-%token	T_DC		".DC"
-%token	T_PRINT		".PRINT"
-%token	T_PLOT		".PLOT"
+%token T_LENGTH		"MOS Length"
+%token T_WIDTH		"MOS Width"
+%token T_AREA		"Area Factor of BJT/Diode"
+%token T_MINUS		"Minus Operator"
+%token T_PLUS		"Plus Operator"
+%token T_OPTIONS	".OPTIONS"
+%token T_SPD		"MNA static matrix is SPD"
+%token T_CUSTOM		"MNA system should be solved with custom solver"
+%token T_ITER		"MNA system should be solved with iterative method"
+%token T_SPARSE		"Sparse matrix option"
+%token T_ITOL		"MNA sytem should be solved with defined tolerance when using iterative methods"
+%token T_DC			".DC"
+%token T_PRINT		".PRINT"
+%token T_PLOT		".PLOT"
+%token T_EXP		".EXP"
+%token T_SIN		".SIN"
+%token T_PULSE		".PULSE"
+%token T_PWL		".PWL"
+%token T_RPAR		"Right Parenthesis"
+%token T_LPAR		"Left Parenthesis"
+%token T_METHOD_BE 	"Backward Euler Method"
+%token T_METHOD_TR	"Trapezoidal Rule Method"
+%token T_TRAN		".TRAN"
 
 %token	<intval>	T_INTEGER	"Integer Number"
 %token	<floatval>	T_FLOAT		"Floating Point Number"
@@ -74,6 +85,7 @@
 %token	T_EOF	0	"EOF"
 
 %type <floatval> value
+%type <floatval> pos_value
 %type <intval> node
 %type <voltage_source> v
 %type <current_source> i
@@ -83,6 +95,8 @@
 %type <diode> d
 %type <mos_transistor> m
 %type <bj_transistor> q
+%type <pwl_pairs> pwl_pairs
+%type <tran_spec> tran_spec
 
 %%
 /* Rules */
@@ -102,9 +116,8 @@ netlist:  netlist v { check_add_element(netlist.add_voltage_source($2),	"Voltage
 		| /* empty */
 
 // Specifications for each element
-
-v: T_V node node value { $$ = new spic::VoltageSource($1, $2, $3, $4); delete $1; }
-i: T_I node node value { $$ = new spic::CurrentSource($1, $2, $3, $4); delete $1; }
+v: T_V node node value tran_spec { $$ = new spic::VoltageSource($1, $2, $3, $4, $5); delete $1; }
+i: T_I node node value tran_spec { $$ = new spic::CurrentSource($1, $2, $3, $4, $5); delete $1; }
 r: T_R node node value { $$ = new spic::Resistor     ($1, $2, $3, $4); delete $1; }
 c: T_C node node value { $$ = new spic::Capacitor    ($1, $2, $3, $4); delete $1; }
 l: T_L node node value { $$ = new spic::Inductor     ($1, $2, $3, $4); delete $1; }
@@ -117,15 +130,25 @@ m: T_M node node node node T_NAME T_LENGTH value T_WIDTH value { $$ = new spic::
 q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $5, $7);  delete $1; delete $5; }
  | T_Q node node node T_NAME              { $$ = new spic::BJT($1, $2, $3, $4, $5, 1.0); delete $1; delete $5; }
 
+tran_spec: T_EXP T_LPAR value value pos_value pos_value pos_value pos_value T_RPAR            { $$ = new spic::TransientSpecs(spic::TransientSpecs::EXP, $3, $4, $5, $6, $7, $8); }
+		| T_SIN T_LPAR value value pos_value pos_value pos_value value T_RPAR                 { $$ = new spic::TransientSpecs(spic::TransientSpecs::SIN, $3, $4, $5, $6, $7, $8); }
+		| T_PULSE T_LPAR value value pos_value pos_value pos_value pos_value pos_value T_RPAR { $$ = new spic::TransientSpecs(spic::TransientSpecs::PULSE, $3, $4, $5, $6, $7, $8, $9); }
+		| T_PWL pwl_pairs                                                                     { $$ = new spic::TransientSpecs(spic::TransientSpecs::PWL, $2); }
+		| /* empty */                                                                         { $$ = NULL; }
+ 
+pwl_pairs: pwl_pairs T_LPAR pos_value value T_RPAR { $$ = $1; $$->push_back(std::pair<float, float>($3, $4)); }
+	| /*Empty*/ { $$ = new std::vector<std::pair<float, float>>(); }
+
 node: T_INTEGER { $$ = find_or_append_node_int($1); }
 	| T_NAME    { $$ = find_or_append_node_str($1); delete $1; }
 
-value: T_PLUS T_FLOAT   { $$ = $2; }
-	| T_MINUS T_FLOAT   { $$ = -$2; }
-	| T_FLOAT
-	| T_PLUS T_INTEGER  { $$ = (float)  $2; }
-	| T_MINUS T_INTEGER { $$ = (float) -$2; }
+value: pos_value
+	| T_PLUS pos_value  { $$ = $2; }
+	| T_MINUS pos_value { $$ = -$2; }
+
+pos_value: T_FLOAT
 	| T_INTEGER         { $$ = (float)  $1; }
+
 
 commands: command commands
 		| /* empty */
@@ -136,6 +159,7 @@ command:  T_OPTIONS options
 		| T_DC T_I value value value { check_dc_sweep(commands.add_i_dc_sweep(*$2, $3, $4, $5), "Current Source", *$2); }
 		| T_PRINT { global_node_list_ptr = &commands.print_nodes; } v_nodes
 		| T_PLOT  { global_node_list_ptr = &commands.plot_nodes;  } v_nodes
+		| T_TRAN value value { commands.transient_list.push_back(spic::TransientAnalysis($2, $3)); }
 
 options : option options
 		| /* empty */
@@ -145,6 +169,8 @@ option:   T_SPD          { commands.options.spd = true; }
 		| T_ITER         { commands.options.iter = true; }
 		| T_ITOL T_FLOAT { commands.options.itol = $2; }
 		| T_SPARSE       { commands.options.sparse = true; }
+		| T_METHOD_BE    { commands.options.transient_method = spic::BE; }
+		| T_METHOD_TR    { commands.options.transient_method = spic::TR; }
 
 v_nodes: v_nodes T_VNODE { add_node_to_list($2); delete $2; }
 	| T_VNODE            { add_node_to_list($1); delete $1; }
@@ -202,8 +228,9 @@ void check_commands()
 {
 	bool no_node_printed = (commands.print_nodes.empty() && commands.plot_nodes.empty());
 	bool no_sweeps = (commands.v_dc_sweeps.empty() && commands.i_dc_sweeps.empty());
+	bool no_transient = (commands.transient_list.empty());
 
-	if (no_sweeps ^ no_node_printed) {
-		yyerror("DC Sweep and Print/Plot commands must be used together");
+	if ((no_sweeps && no_transient) ^ no_node_printed) {
+		yyerror("Either DC Sweep or Transient analysis needed for Print/Plot commands");
 	}
 }

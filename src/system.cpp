@@ -11,11 +11,17 @@
 
 namespace spic {
 	/* Implemantation of the Dense MNA System */
-	MNASystemDC::MNASystemDC(Netlist &netlist, int total_nodes)
-	: MNASystemDC(netlist, total_nodes, total_nodes - 1 + netlist.voltage_sources.size() + netlist.inductors.size()) {}
+	MNASystem::MNASystem(Netlist &netlist, int total_nodes)
+	: MNASystem(netlist, total_nodes, total_nodes - 1 + netlist.voltage_sources.size() + netlist.inductors.size()) {}
 
-	MNASystemDC::MNASystemDC(Netlist &netlist, int total_nodes, int MNA_matrix_dim)
+	MNASystem::MNASystem(Netlist &netlist, int total_nodes, int MNA_matrix_dim)
 		: netlist(netlist), total_nodes(total_nodes), System(MNA_matrix_dim)
+	{
+		create_dc_system();
+	}
+
+	/* Add stamps for the G part of the MNA system */
+	void MNASystem::create_dc_system()
 	{
 		int total_voltage_sources = netlist.voltage_sources.size();
 		int total_inductors = netlist.inductors.size();
@@ -46,6 +52,25 @@ namespace spic {
 		}
 	}
 
+	/* 
+	 * Add stamps for the transient part of the system depending
+	 * on the derivative calculation method
+	 */
+	void MNASystem::create_trans_system()
+	{
+		// Backward Euler:
+		// A += C*1/h
+		return;
+	}
+
+	// void MNASystem::calculate_next_transient_b()
+	// {
+	// 	// Forward Euler:
+	// 	// b = ...
+	// 	return;
+	// }
+
+
 	/* For a resistor, do the following adjustments to the static_matrix (A):
 	 * A(<->,<+>) -= 1/resistance
 	 * A(<+>,<->) -= 1/resistance
@@ -53,7 +78,7 @@ namespace spic {
 	 * A(<->,<->) += 1/resistance
 	 * Where <+>,<-> are the positive and negative nodes of the resistor
 	 */
-	void MNASystemDC::add_resistor_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
+	void MNASystem::add_resistor_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
 		double conductance = 1 / value;
 		if (node_positive > 0 && node_negative > 0) {
 			A(node_positive-1, node_negative-1) -= conductance;
@@ -72,7 +97,7 @@ namespace spic {
 	 * b(<->) += value
 	 * Where <+>,<-> are the positive and negative nodes of the current source
 	 */
-	void MNASystemDC::add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
+	void MNASystem::add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
 		if (node_positive > 0) {
 			b(node_positive - 1) -= value;
 		}
@@ -92,7 +117,7 @@ namespace spic {
 	 * n is the total number of nodes and k is the index of the voltage source
 	 * Note that in DC analysis the inductors are considered as voltage sources with 0 value
 	 */
-	void MNASystemDC::add_voltage_source_stamp(node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value) {
+	void MNASystem::add_voltage_source_stamp(node_id_t node_positive, node_id_t node_negative, int voltage_src_id, float value) {
 		int matrix_voltage_idx = total_nodes - 1 + voltage_src_id;
 		b(matrix_voltage_idx) = value;
 		if (node_positive > 0) {
@@ -107,11 +132,16 @@ namespace spic {
 
 	/* Implemantation of the Sparse MNA System */
 
-	MNASparseSystemDC::MNASparseSystemDC(Netlist &netlist, int total_nodes)
-		: MNASparseSystemDC(netlist, total_nodes, total_nodes - 1 + netlist.voltage_sources.size() + netlist.inductors.size()) {}
+	MNASparseSystem::MNASparseSystem(Netlist &netlist, int total_nodes)
+		: MNASparseSystem(netlist, total_nodes, total_nodes - 1 + netlist.voltage_sources.size() + netlist.inductors.size()) {}
 
-	MNASparseSystemDC::MNASparseSystemDC(Netlist &netlist, int total_nodes, int MNA_matrix_dim)
+	MNASparseSystem::MNASparseSystem(Netlist &netlist, int total_nodes, int MNA_matrix_dim)
 		: netlist(netlist), total_nodes(total_nodes), SparseSystem(MNA_matrix_dim)
+		{
+			create_dc_sparse_system();
+		}
+
+	void MNASparseSystem::create_dc_sparse_system()
 	{
 		int total_voltage_sources = netlist.voltage_sources.size();
 		int total_inductors = netlist.inductors.size();
@@ -155,7 +185,7 @@ namespace spic {
 	 * A(<->,<->) += 1/resistance
 	 * Where <+>,<-> are the positive and negative nodes of the resistor
 	 */
-	void MNASparseSystemDC::add_resistor_stamp(std::vector<Eigen::Triplet<double>> &triplets,
+	void MNASparseSystem::add_resistor_stamp(std::vector<Eigen::Triplet<double>> &triplets,
 												node_id_t node_positive, node_id_t node_negative,
 												float value)
 	{
@@ -177,7 +207,7 @@ namespace spic {
 	 * b(<->) += value
 	 * Where <+>,<-> are the positive and negative nodes of the current source
 	 */
-	void MNASparseSystemDC::add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
+	void MNASparseSystem::add_current_source_stamp(node_id_t node_positive, node_id_t node_negative, float value) {
 		if (node_positive > 0) {
 			b(node_positive - 1) -= value;
 		}
@@ -197,7 +227,7 @@ namespace spic {
 	 * n is the total number of nodes and k is the index of the voltage source
 	 * Note that in DC analysis the inductors are considered as voltage sources with 0 value
 	 */
-	void MNASparseSystemDC::add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> &triplets,
+	void MNASparseSystem::add_voltage_source_stamp(std::vector<Eigen::Triplet<double>> &triplets,
 													node_id_t node_positive, node_id_t node_negative,
 													int voltage_src_id, float value)
 	{
@@ -283,7 +313,7 @@ static void printSystem(const Eigen::MatrixXd& A, const Eigen::VectorXd& b) {
 	}
 }
 
-/* Support of << operator for printing a MNASystemDC object*/
+/* Support of << operator for printing a MNASystem object*/
 std::ostream& operator<<(std::ostream &out, spic::System &system)
 {
 	printSystem(system.A, system.b);

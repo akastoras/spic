@@ -29,11 +29,14 @@ namespace po = boost::program_options;
 
 /* Wrapper functions for spic stages of execution */
 void parse_arguments(po::variables_map &vm, int argc, char** argv);
+
 void parse_spice_file(std::filesystem::path cir_file, Logger &logger);
+
 void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorXd &b,
 	const std::filesystem::path &output_dir, const std::string &output_dir_str,
 	const std::filesystem::path &cir_file, const std::string &cir_file_str,
 	bool bypass_options, Logger &logger);
+
 bool check_conflicting_options(spic::options_t &options, Logger log);
 
 int main(int argc, char** argv)
@@ -68,6 +71,7 @@ int main(int argc, char** argv)
 		commands.options.sparse = vm["sparse"].as<bool>();
 		commands.options.iter = vm["iter"].as<bool>();
 		commands.options.itol = vm["itol"].as<double>();
+		commands.options.transient_method = (vm["transient_method"].as<std::string>().find("BE") == 0) ? spic::BE : spic::TR;
 	}
 
 	// Show final commands
@@ -88,14 +92,14 @@ int main(int argc, char** argv)
 	// Construct MNA System
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
 	if (commands.options.sparse) {
-		spic::MNASparseSystemDC *sparse_system = new spic::MNASparseSystemDC(netlist, node_table.size());
+		spic::MNASparseSystem *sparse_system = new spic::MNASparseSystem(netlist, node_table.size());
 		// Construct a Solver object
 		slv = new spic::Solver(*sparse_system, commands.options, logger);
 		// Solve on the operating point
 		solve_operating_point(slv, sparse_system->x, sparse_system->b, output_dir, output_dir_str,
 							cir_file, cir_file_str, bypass_options, logger);
 	} else {
-		spic::MNASystemDC *system = new spic::MNASystemDC(netlist, node_table.size());
+		spic::MNASystem *system = new spic::MNASystem(netlist, node_table.size());
 		// Construct a Solver object
 		slv = new spic::Solver(*system, commands.options, logger);
 		// Solve on the operating point
@@ -135,8 +139,9 @@ void parse_arguments(po::variables_map &vm, int argc, char **argv) {
 		("custom", po::bool_switch()->default_value(false), "Enable custom solver option")
 		("sparse", po::bool_switch()->default_value(false), "Enable sparse solver option")
 		("iter", po::bool_switch()->default_value(false), "Enable iterative solver option")
-		("itol", po::value<double>()->default_value(1e-3), "Set iteration tolerance");
-		
+		("itol", po::value<double>()->default_value(1e-3), "Set iteration tolerance")
+		("transient_method", po::value<std::string>()->default_value("TR"), "Set derivative calculation method");
+
 	try {
 		po::store(po::parse_command_line(argc, argv, desc), vm);
 		po::notify(vm);

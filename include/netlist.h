@@ -2,8 +2,11 @@
 
 #include <string>
 #include <vector>
+#include <cmath>
+#include <cassert>
 
 #include "node_table.h"
+#include "transient.h"
 
 namespace spic {
 	using element_id_t = int;
@@ -33,12 +36,22 @@ namespace spic {
 			Element(str), node_positive(node1), node_negative(node2), value(val) { }
 	};
 
-	class VoltageSource : public Element2nodes {
+	/* Source class to be inherited from by voltage and current sources */
+	class Source : public Element2nodes {
+		public:
+		TransientSpecs *transient_specs;
 		using Element2nodes::Element2nodes;
+
+		Source(std::string *str, int node1, int node2, float val, TransientSpecs *transient_specs):
+			Element2nodes(str, node1, node2, val), transient_specs(transient_specs) { }
 	};
 
-	class CurrentSource : public Element2nodes {
-		using Element2nodes::Element2nodes;
+	class VoltageSource : public Source {
+		using Source::Source;
+	};
+
+	class CurrentSource : public Source {
+		using Source::Source;
 	};
 
 	class Resistor : public Element2nodes {

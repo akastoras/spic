@@ -29,7 +29,7 @@
 %option noyywrap
 
 /* Declare Start Conditions */
-%x COMMENT ELEMENT_PARAMS OPTIONS COMMANDS NODES END
+%x COMMENT ELEMENT_PARAMS OPTIONS COMMANDS NODES TRANSIENT END
 
 WHITECHAR	[ \r\v\n]
 
@@ -57,15 +57,22 @@ FLOAT		{FLOAT1}|{FLOAT2}
 
 {WHITECHAR}			{ /* Ignore white spaces */ }
 
+"+"					{ return print_token(T_PLUS);  }
+"-"					{ return print_token(T_MINUS);  }
+"L="				{ return print_token(T_LENGTH); }
+"W="				{ return print_token(T_WIDTH);  }
+"area="				{ return print_token(T_AREA);   }
+
+"EXP"				{ return print_token(T_EXP);   }
+"SIN"				{ return print_token(T_SIN);   }
+"PULSE"				{ return print_token(T_PULSE); }
+"PWL"				{ return print_token(T_PWL);   }
+"("					{ return print_token(T_LPAR);  }
+")"					{ return print_token(T_RPAR);  }
+
 {INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 {NAME}				{ yylval.strval = new std::string(yytext); TOUPPER(yylval.strval); return print_token(T_NAME); }
-
-"+"					{ return print_token(T_PLUS); }
-"-"					{ return print_token(T_MINUS); }
-"L="				{ return print_token(T_LENGTH); }
-"W="				{ return print_token(T_WIDTH); }
-"area="				{ return print_token(T_AREA); }
 
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
@@ -96,6 +103,8 @@ FLOAT		{FLOAT1}|{FLOAT2}
 "ITER"				{ return print_token(T_ITER); }
 "ITOL="				{ return print_token(T_ITOL); }
 "SPARSE"			{ return print_token(T_SPARSE); }
+"METHOD=TR"			{ return print_token(T_METHOD_TR); }
+"METHOD=BE"			{ return print_token(T_METHOD_BE); }
 
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 
@@ -110,6 +119,16 @@ FLOAT		{FLOAT1}|{FLOAT2}
 "V("{NAME}/")"		{ yylval.strval = new std::string(yytext+2); TOUPPER(yylval.strval); return print_token(T_VNODE); }
 ")"					{ /* Ignore closing parenthesis */ }
 "."					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
+}
+
+<TRANSIENT>{
+\n					{ BEGIN(INITIAL); }
+{WHITECHAR}			{ /* Ignore white spaces */ }
+
+{FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
+{INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
+
+.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
 <END>{
@@ -140,6 +159,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 ".OP"				{ /* Ignore .OP command */ }
 ".PLOT"				{ BEGIN(NODES); return print_token(T_PLOT); }
 ".PRINT"			{ BEGIN(NODES); return print_token(T_PRINT); }
+".TRAN"				{ BEGIN(TRANSIENT); return print_token(T_TRAN); }
 
 "+"					{ BEGIN(ELEMENT_PARAMS); return print_token(T_PLUS); }
 
@@ -221,6 +241,24 @@ int print_token(int token)
 		std::cout << "Found Iteration Tolerance\n";
 	} else if (token == T_SPARSE) {
 		std::cout << "Found Sparse Matrix Option\n";
+	} else if (token == T_EXP) {
+		std::cout << "Found Exponential Function\n";
+	} else if (token == T_SIN) {
+		std::cout << "Found Sine Function\n";
+	} else if (token == T_PULSE) {
+		std::cout << "Found Pulse Function\n";
+	} else if (token == T_PWL) {
+		std::cout << "Found PWL Function\n";
+	} else if (token == T_LPAR) {
+		std::cout << "Found Left Parenthesis\n";
+	} else if (token == T_RPAR) {
+		std::cout << "Found Right Parenthesis\n";
+	} else if (token == T_TRAN) {
+		std::cout << "Found Transient Command\n";
+	} else if (token == T_METHOD_TR) {
+		std::cout << "Found Trapezoidal Method\n";
+	} else if (token == T_METHOD_BE) {
+		std::cout << "Found Backward Euler Method\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

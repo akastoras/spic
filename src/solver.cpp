@@ -84,6 +84,7 @@ namespace spic {
 
 		Eigen::MatrixXd &A = system->A;
 		int n = system->n;
+		perm = new Eigen::VectorXi(n);
 
 		// Initialize permutation vector
 		for (int i = 0; i < n; i++) {
@@ -637,5 +638,6 @@ std::ostream& operator<<(std::ostream &out, const spic::options_t &options) {
 	out << "\tSPD: "  << (options.spd ? "Enabled" : "Disabled") << std::endl;
 	out << "\tIter: " << (options.iter ? "Enabled" : "Disabled") << std::endl;
 	out << "\tItol: " << options.itol << std::endl;
+	out << "\tTransient Method: "<< ((options.transient_method == spic::TR) ? "TR" : "BE") << std::endl;
 	return out;
 }
