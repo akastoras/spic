@@ -30,6 +30,15 @@ namespace spic {
 	bool Netlist::add_bjt(BJT *q) {
 		return bjt.add_element(q);
 	}
+
+	// Eval wrapper for Sources' Transient value
+	double Source::eval(double t)
+	{
+		if (transient_specs) {
+			return transient_specs->eval(t);
+		}
+		return value;
+	}
 }
 
 std::ostream& operator<<(std::ostream &out, spic::VoltageSource &v) {
@@ -119,41 +128,41 @@ std::ostream& operator<<(std::ostream &out, spic::BJT &q) {
 /* Support of << operator for printing a NodeTable */
 std::ostream& operator<<(std::ostream &out, spic::Netlist &nl) {
 #if VERBOSE_NETLIST == 2
-	if (!nl.voltage_sources.elements.empty()) {
+	if (!nl.voltage_sources.empty()) {
 		out << nl.voltage_sources << std::endl;
 	}
-	if (!nl.current_sources.elements.empty()) {
+	if (!nl.current_sources.empty()) {
 		out << nl.current_sources << std::endl;
 	}
-	if (!nl.resistors.elements.empty()) {
+	if (!nl.resistors.empty()) {
 		out << nl.resistors       << std::endl;
 	}
-	if (!nl.capacitors.elements.empty()) {
+	if (!nl.capacitors.empty()) {
 		out << nl.capacitors      << std::endl;
 	}
-	if (!nl.inductors.elements.empty()) {
+	if (!nl.inductors.empty()) {
 		out << nl.inductors       << std::endl;
 	}
-	if (!nl.diodes.elements.empty()) {
+	if (!nl.diodes.empty()) {
 		out << nl.diodes          << std::endl;
 	}
-	if (!nl.mos.elements.empty()) {
+	if (!nl.mos.empty()) {
 		out << nl.mos             << std::endl;
 	}
-	if (!nl.bjt.elements.empty()) {
+	if (!nl.bjt.empty()) {
 		out << nl.bjt             << std::endl;
 	}
 #endif
 #if VERBOSE_NETLIST >= 1
 	out << "Netlist consists of:" << std::endl;
-	out << "\t" <<  nl.voltage_sources.elements.size() << " voltage sources" << std::endl;
-	out << "\t" <<  nl.current_sources.elements.size() << " current sources" << std::endl;
-	out << "\t" <<  nl.resistors.elements.size()       << " resistors" << std::endl;
-	out << "\t" <<  nl.capacitors.elements.size()      << " capacitors" << std::endl;
-	out << "\t" <<  nl.inductors.elements.size()       << " inductors" << std::endl;
-	out << "\t" <<  nl.diodes.elements.size()          << " diode" << std::endl;
-	out << "\t" <<  nl.mos.elements.size()             << " mosfet transistors" << std::endl;
-	out << "\t" <<  nl.bjt.elements.size()             << " bipolar junction transistors" << std::endl;
+	out << "\t" <<  nl.voltage_sources.size() << " voltage sources" << std::endl;
+	out << "\t" <<  nl.current_sources.size() << " current sources" << std::endl;
+	out << "\t" <<  nl.resistors.size()       << " resistors" << std::endl;
+	out << "\t" <<  nl.capacitors.size()      << " capacitors" << std::endl;
+	out << "\t" <<  nl.inductors.size()       << " inductors" << std::endl;
+	out << "\t" <<  nl.diodes.size()          << " diode" << std::endl;
+	out << "\t" <<  nl.mos.size()             << " mosfet transistors" << std::endl;
+	out << "\t" <<  nl.bjt.size()             << " bipolar junction transistors" << std::endl;
 #endif
 	return out;
 }

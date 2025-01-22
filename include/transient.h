@@ -5,6 +5,8 @@
 #include <cassert>
 #include <ostream>
 
+#include "solver.h"
+
 namespace spic {
 	/* Transiet Specifcation of Source elements */
 	class TransientSpecs {
@@ -96,6 +98,28 @@ namespace spic {
 
 		TransientAnalysis(double time_step, double fin_time) :
 			time_step(time_step), fin_time(fin_time) {}
+
+		~TransientAnalysis() {}
+
+		void run(Solver &solver,
+				MNASystemTransient &tran_mna_system,
+				std::vector<std::string> &prints,
+				std::vector<std::string> &plots,
+				std::filesystem::path transient_dir,
+				Logger &logger);
+		
+		private:
+		void calculate_source_vector(Eigen::VectorXd &source_vector, int total_nodes, double time);
+		std::string get_transient_name(std::string print_node);
+
+		void dump_results(std::unordered_map<std::string, std::vector<double>> transient_data,
+											std::vector<double>                                  transient_times,
+											std::vector<std::string>                             unique_vector,
+											std::filesystem::path                                transient_dir);
+
+		void plot_results(std::vector<std::string> &plots,
+						Logger                   &logger,
+						std::filesystem::path    transient_dir);
 	};
 }
 

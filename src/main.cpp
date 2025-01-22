@@ -90,16 +90,19 @@ int main(int argc, char** argv)
 	spic::Solver *slv;
 
 	// Construct MNA System
+	spic::MNASparseSystem *sparse_system = nullptr;
+	spic::MNASystem *system = nullptr;
+	
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
 	if (commands.options.sparse) {
-		spic::MNASparseSystem *sparse_system = new spic::MNASparseSystem(netlist, node_table.size());
+		sparse_system = new spic::MNASparseSystem(netlist, node_table.size());
 		// Construct a Solver object
 		slv = new spic::Solver(*sparse_system, commands.options, logger);
 		// Solve on the operating point
 		solve_operating_point(slv, sparse_system->x, sparse_system->b, output_dir, output_dir_str,
 							cir_file, cir_file_str, bypass_options, logger);
 	} else {
-		spic::MNASystem *system = new spic::MNASystem(netlist, node_table.size());
+		system = new spic::MNASystem(netlist, node_table.size());
 		// Construct a Solver object
 		slv = new spic::Solver(*system, commands.options, logger);
 		// Solve on the operating point
@@ -107,10 +110,20 @@ int main(int argc, char** argv)
 							cir_file, cir_file_str, bypass_options, logger);
 	}
 
-	// Perform the dc sweeps (if there are any)
+	// Perform any existent dc sweeps
 	if (!disable_dc_sweeps) {
 		commands.dc_sweeps_dir = output_dir/"dc_sweeps";
 		commands.perform_dc_sweeps(slv, logger);
+	}
+
+	// Perform any existent transient analyses
+	if (!commands.transient_list.empty()) {
+		commands.transient_dir = output_dir/"transient";
+		if (commands.options.sparse) {
+			logger.log(WARNING, "Unsupported sparse transient analysis yet");
+		} else {
+			commands.perform_transients(*slv, *system, logger);
+		}
 	}
 
 	// Performance Counters

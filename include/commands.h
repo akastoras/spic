@@ -20,7 +20,7 @@ namespace spic {
 		std::vector<DCSweep> i_dc_sweeps;
 		std::filesystem::path dc_sweeps_dir;
 		std::vector<TransientAnalysis> transient_list;
-		std::filesystem::path tran_analysis_dir;
+		std::filesystem::path transient_dir;
 		std::vector<std::string> print_nodes;
 		std::vector<std::string> plot_nodes;
 
@@ -29,6 +29,7 @@ namespace spic {
 		bool add_v_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
 		bool add_i_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
 		void perform_dc_sweeps(Solver *solver, Logger &logger);
+		void perform_transients(Solver &solver, MNASystem &mna_system, Logger &logger);
 	};
 }
 std::ostream& operator<<(std::ostream &out, const spic::Commands &commands);

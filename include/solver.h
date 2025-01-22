@@ -15,8 +15,9 @@
 #define EPS 1e-23
 
 namespace spic {
-	typedef enum { BE, TR } transient_method_t;
-
+	typedef enum transient_method transient_method_t;
+	enum transient_method : unsigned int { BE, TR };
+	
 	typedef struct options {
 		bool custom; // Enable usage of custom implementations
 		bool spd; // If iter=false: Enable cholesky decomp, else: Enable conjugate gradient

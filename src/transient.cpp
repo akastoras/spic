@@ -2,10 +2,19 @@
 #include <cmath>
 #include <cassert>
 #include <ostream>
+#include <set>
 
 #include "transient.h"
+#include "commands.h"
+#include "solver.h"
+#include "netlist.h"
+#include "node_table.h"
 
 namespace spic {
+	/*******************************************************************/
+	/*                 Routines for TransientSpec class               */
+	/*******************************************************************/
+
 	double TransientSpecs::eval(double t) {
 		switch (type)
 		{
@@ -75,7 +84,167 @@ namespace spic {
 		// Case of t after the last point (no need to check)
 		return (*pwl.points)[pwl.points->size() - 1].second;
 	}
+
+	/******************************************************************/
+	/*              Routines for TransientAnalysis class              */
+	/******************************************************************/
+
+	/* Main routine for executing a Transient Analysis */
+	void TransientAnalysis::run(Solver &solver,
+								MNASystemTransient &tran_mna_system,
+								std::vector<std::string> &prints,
+								std::vector<std::string> &plots,
+								std::filesystem::path transient_dir,
+								Logger &logger)
+	{
+		int steps = fin_time / time_step;
+
+		Eigen::VectorXd *curr_source_vector_ptr = new Eigen::VectorXd(tran_mna_system.mna_system.n);
+		curr_source_vector_ptr->setZero();
+
+		// Create a set to store unique elements from prints and plots
+		std::set<std::string> unique_elements(prints.begin(), prints.end());
+		unique_elements.insert(plots.begin(), plots.end());
+
+		// Convert the set back to a vector
+		std::vector<std::string> unique_vector(unique_elements.begin(), unique_elements.end());
+
+		// Init vector of vectors
+		std::unordered_map<std::string, std::vector<double>> transient_data;
+		for (auto &print_node : unique_vector) {
+			transient_data[print_node] = std::vector<double>();
+		}
+		std::vector<double> transient_times;
+
+		// Find the transient source vector for the initial time which is 0.0
+		calculate_source_vector(*curr_source_vector_ptr, tran_mna_system.mna_system.total_nodes, 0.0);
+
+		// Solve the MNA system for the initial time
+		solver.solve(*curr_source_vector_ptr);
+
+		Eigen::VectorXd *prev_source_vector_ptr = nullptr;
+		if (commands.options.transient_method == TR) {
+			prev_source_vector_ptr = new Eigen::VectorXd(*curr_source_vector_ptr);
+		}
+
+		// Create the new transient A matrix
+		tran_mna_system.create_tran_system(time_step);
+
+		// Run the transient analysis
+		for (int k = 1; k <= steps; k++) {
+			transient_times.push_back(k * time_step);
+			// if (k <= 3) {
+			// 	std::cout << "Time: " << transient_times[k-1] << std::endl;
+			// 	std::cout << "Source Vector: " << *curr_source_vector_ptr << std::endl;
+			// 	std::cout << "x: " << tran_mna_system.mna_system.x << std::endl;
+			// }
+
+			// Calculate the source vector for the current time
+			calculate_source_vector(*curr_source_vector_ptr, tran_mna_system.mna_system.total_nodes, transient_times[k-1]);
+
+
+			// Update the system's b vector
+			if (commands.options.transient_method == BE) {
+				tran_mna_system.update_tran_system_be(*curr_source_vector_ptr, time_step);
+			} else {
+				tran_mna_system.update_tran_system_tr(*curr_source_vector_ptr, *prev_source_vector_ptr, time_step);
+				std::swap<Eigen::VectorXd*>(curr_source_vector_ptr, prev_source_vector_ptr);
+			}
+
+			// Solve the system
+			solver.solve(tran_mna_system.mna_system.b);
+
+			// Store the results for the print nodes
+			for (auto &print_node : unique_vector) {
+				int node_id = node_table.find_node(&print_node) - 1;
+				transient_data[print_node].push_back(tran_mna_system.mna_system.x(node_id));
+			}
+		}
+
+		// Dump the Transient Analysis results to files
+		dump_results(transient_data, transient_times, unique_vector, transient_dir);
+		
+		// Use gnuplot to plot the Transient Analysis results for the plot nodes
+		plot_results(plots, logger, transient_dir);
+
+		delete prev_source_vector_ptr;
+		delete curr_source_vector_ptr;
+	}
+
+	/* Calculate the source vector for the current time */
+	void TransientAnalysis::calculate_source_vector(Eigen::VectorXd &source_vector, int total_nodes, double time)
+	{
+		// Set Source Vector to zero
+		source_vector.setZero();
+
+		// Add the current sources transient stamp to the source vector
+		for (auto &source : netlist.current_sources.elements) {
+			double value = source.eval(time);
+			int node_positive = source.node_positive;
+			int node_negative = source.node_negative;
+
+			if (node_positive > 0) {
+				source_vector[node_positive - 1] -= value;
+			}
+			if (node_negative > 0) {
+				source_vector[node_negative - 1] += value;
+			}
+		}
+
+		// Add the voltage sources transient stamp to the source vector
+		int total_voltage_sources = netlist.voltage_sources.size();
+		for (int i = 0; i < total_voltage_sources; i++) {
+			auto &source = netlist.voltage_sources.elements[i];
+			double value = source.eval(time);
+			source_vector[total_nodes - 1 + i] = value;
+		}
+	}
+
+	std::string TransientAnalysis::get_transient_name(std::string print_node)
+	{
+		std::string step_str = std::to_string(time_step);
+		step_str.erase(step_str.find_last_not_of('0') + 1, std::string::npos);
+		step_str.erase(step_str.find_last_not_of('.') + 1, std::string::npos);
+
+		std::string fin_str = std::to_string(fin_time);
+		fin_str.erase(fin_str.find_last_not_of('0') + 1, std::string::npos);
+		fin_str.erase(fin_str.find_last_not_of('.') + 1, std::string::npos);
+		
+		return "tran_" + step_str + "_" + fin_str + "_V(" + print_node + ").dat";
+	}
+
+		/* Routine that prints dc_sweep results */
+	void TransientAnalysis::dump_results(std::unordered_map<std::string, std::vector<double>> transient_data,
+										std::vector<double>                                  transient_times,
+										std::vector<std::string>                             unique_vector,
+										std::filesystem::path                                transient_dir)
+	{
+		std::ofstream file;
+		for (auto &print_node : unique_vector) {
+			file.open(transient_dir/get_transient_name(print_node));
+			for (int i = 0; i < transient_times.size(); i++) {
+				file << transient_times[i] << " " << transient_data[print_node][i] << std::endl;
+			}
+			file.close();
+		}
+	}
+
+	/* Routine that plots dc_sweep results */
+	void TransientAnalysis::plot_results(std::vector<std::string> &plots,
+										Logger                   &logger,
+										std::filesystem::path    transient_dir)
+	{
+		for (auto &plot_node : plots) {
+			std::string plot_file = transient_dir/get_transient_name(plot_node);
+			std::string image_file = plot_file;
+			image_file.erase(plot_file.find(".dat"), std::string::npos);
+			std::string plot_command = "gnuplot -e \"set terminal png; set output '" + image_file + ".png'; plot '" + plot_file + "' with lines title 'V(" + plot_node + ") vs time\"";
+			logger.log(INFO, plot_command);
+			std::system(plot_command.c_str());
+		}
+	}
 }
+
 
 std::ostream& operator<<(std::ostream &out, const spic::TransientSpecs &transient_specs)
 {

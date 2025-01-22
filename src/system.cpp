@@ -53,23 +53,76 @@ namespace spic {
 	}
 
 	/* 
-	 * Add stamps for the transient part of the system depending
+	 * Add stamps for the transient part (C) of the system depending
 	 * on the derivative calculation method
 	 */
-	void MNASystem::create_trans_system()
+	void MNASystemTransient::create_initial_tran_system()
 	{
-		// Backward Euler:
-		// A += C*1/h
-		return;
+		int total_inductors = netlist.inductors.size();
+		int total_capacitors = netlist.capacitors.size();
+		int total_voltage_sources = netlist.voltage_sources.size();
+		int node_pos, node_neg;
+
+		// Fill the matrix with the stamps of the capacitors
+		for (auto it = netlist.capacitors.elements.begin(); it != netlist.capacitors.elements.end(); ++it) {
+			add_capacitor_stamp(it->node_positive, it->node_negative, it->value);
+		}
+
+		// Fill the matrix with the stamps of the inductors
+		for (int i = 0; i < total_inductors; i++) {
+			add_inductor_stamp(total_voltage_sources + i, netlist.inductors.elements[i].value);
+		}
 	}
 
-	// void MNASystem::calculate_next_transient_b()
-	// {
-	// 	// Forward Euler:
-	// 	// b = ...
-	// 	return;
-	// }
+	/*
+	 * Calculates the A = G + C / time_step matrix for a Transient Analysis run
+	 */
+	void MNASystemTransient::create_tran_system(double time_step)
+	{
+		if (transient_method == BE) {
+			mna_system.A = G + C / time_step;
+		} else if (transient_method == TR) {
+			mna_system.A = G + C * (2 / time_step);
+		}
+	}
 
+	/*
+	 * Update the b part of the Transient Equation for the Backward Euler method
+	 */
+	void MNASystemTransient::update_tran_system_be(Eigen::VectorXd &e, double time_step)
+	{
+		mna_system.b = e + (C * mna_system.x) / time_step;
+	}
+
+	/*
+	 * Update the b part of the Transient Equation for the Trapezoidal method
+	 */
+	void MNASystemTransient::update_tran_system_tr(Eigen::VectorXd &e_new, Eigen::VectorXd &e_old, double time_step)
+	{
+		mna_system.b = e_new + e_old - (G - C * (2.0 / time_step)) * mna_system.x;
+	}
+
+	/* Adds capacitor stamps for the transient part (C) of the MNA system */
+	void MNASystemTransient::add_capacitor_stamp(node_id_t node_positive, node_id_t node_negative, float value)
+	{
+		if (node_positive > 0 && node_negative > 0) {
+			C(node_positive-1, node_negative-1) -= value;
+			C(node_negative-1, node_positive-1) -= value;
+
+		}
+		if (node_positive > 0) {
+			C(node_positive-1, node_positive-1) += value;
+		}
+		if (node_negative > 0) {
+			C(node_negative-1, node_negative-1) += value;
+		}
+	}
+
+	/* Adds inductor stamps for the transient part (C) of the MNA system */
+	void MNASystemTransient::add_inductor_stamp(int voltage_src_id, float value) {
+		int matrix_voltage_idx = mna_system.total_nodes - 1 + voltage_src_id;
+		C(matrix_voltage_idx, matrix_voltage_idx) -= value;
+	}
 
 	/* For a resistor, do the following adjustments to the static_matrix (A):
 	 * A(<->,<+>) -= 1/resistance
@@ -131,7 +184,6 @@ namespace spic {
 	}
 
 	/* Implemantation of the Sparse MNA System */
-
 	MNASparseSystem::MNASparseSystem(Netlist &netlist, int total_nodes)
 		: MNASparseSystem(netlist, total_nodes, total_nodes - 1 + netlist.voltage_sources.size() + netlist.inductors.size()) {}
 

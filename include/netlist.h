@@ -44,6 +44,9 @@ namespace spic {
 
 		Source(std::string *str, int node1, int node2, float val, TransientSpecs *transient_specs):
 			Element2nodes(str, node1, node2, val), transient_specs(transient_specs) { }
+
+		double eval(double t);
+
 	};
 
 	class VoltageSource : public Source {
@@ -135,6 +138,9 @@ namespace spic {
 			}
 			int size() {
 				return elements.size();
+			}
+			int empty() {
+				return elements.empty();
 			}
 		};
 

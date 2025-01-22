@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include "dc_sweeps.h"
+#include "netlist.h"
 
 namespace spic {
 	// DCSweep::get_dc_sweep_name function creates the DC Sweep filename for a print node
