@@ -56,13 +56,17 @@ namespace spic {
 	// Commands::perform_dc_sweeps function performs all the Transient Analysises
 	void Commands::perform_transients(Solver &solver, MNASystem &mna_system, Logger &logger)
 	{
+		logger.log(INFO, "Performing Transient Analysises");
+
 		// Delete transient_dir if it exists and then create it again
 		if (std::filesystem::exists(transient_dir)) {
 			logger.log(WARNING, std::string(transient_dir) + " exists... removing it");
 			std::filesystem::remove_all(transient_dir);
 		}
 		logger.log(INFO, "Creating " + std::string(transient_dir));
-		std::filesystem::create_directories(transient_dir);
+		if (!std::filesystem::create_directories(transient_dir)) {
+			logger.log(ERROR, "Unable to create " + std::string(transient_dir));
+		}
 
 		MNASystemTransient tran_mna_system(commands.options.transient_method, mna_system);
 

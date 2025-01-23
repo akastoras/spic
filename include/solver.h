@@ -108,35 +108,30 @@ namespace spic {
 			perf_counter.compute_calls = 0;
 			perf_counter.solve_calls = 0;
 
+			/* Set the Solver method */
 			if (options.iter) {
 				if (options.spd) {
 					method = CG;
 				} else {
 					method = BiCG;
 				}
-
-				compute();
 			} else {
 				if (options.spd) {
 					method = CHOLESKY;
 				} else {
 					method = LU;
 				}
-
-				if (!decompose()) {
-					logger.log(ERROR, "Exiting due to non-SPD MNA system");
-					exit(EXIT_FAILURE);
-				}
 			}
 		}
 		~Solver() {}
 
-		/* Wrappers for decompose and solve */
+		/* Wrappers for setting up the solver and then solving the system */
+		void analyze();
 		void solve(const Eigen::VectorXd &b);
 		void dump_perf_counters(std::filesystem::path &filename, double g_time);
 
 
-		/* All functions except the constructor, solve and dump_performance_counters are private */
+		/* All functions except the constructor, analyze, solve and dump_performance_counters are private */
 		private:
 		bool decompose();
 		void compute();

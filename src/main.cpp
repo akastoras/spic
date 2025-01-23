@@ -32,10 +32,12 @@ void parse_arguments(po::variables_map &vm, int argc, char** argv);
 
 void parse_spice_file(std::filesystem::path cir_file, Logger &logger);
 
+void create_directory_structure(const std::filesystem::path &output_dir,
+								const std::filesystem::path &cir_file, 
+								bool bypass_options, Logger &logger);
+
 void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorXd &b,
-	const std::filesystem::path &output_dir, const std::string &output_dir_str,
-	const std::filesystem::path &cir_file, const std::string &cir_file_str,
-	bool bypass_options, Logger &logger);
+						const std::filesystem::path &output_dir);
 
 bool check_conflicting_options(spic::options_t &options, Logger log);
 
@@ -82,6 +84,8 @@ int main(int argc, char** argv)
 		exit(1);
 	}
 
+	// Create output directory and a copy of the circuit file used
+	create_directory_structure(output_dir, cir_file, bypass_options, logger);
 
 	// Initialize Parallelism in Eigen
 	int max_threads = omp_get_max_threads();
@@ -92,38 +96,42 @@ int main(int argc, char** argv)
 	// Construct MNA System
 	spic::MNASparseSystem *sparse_system = nullptr;
 	spic::MNASystem *system = nullptr;
-	
+
 	logger.log(INFO, "Constructing MNA System for DC analysis.");
 	if (commands.options.sparse) {
 		sparse_system = new spic::MNASparseSystem(netlist, node_table.size());
+
 		// Construct a Solver object
 		slv = new spic::Solver(*sparse_system, commands.options, logger);
+
+		// Perform any existent transient analyses
+		if (!commands.transient_list.empty()) {
+			commands.transient_dir = output_dir/"transient";
+			logger.log(WARNING, "Unsupported sparse transient analysis yet");
+		}
+
 		// Solve on the operating point
-		solve_operating_point(slv, sparse_system->x, sparse_system->b, output_dir, output_dir_str,
-							cir_file, cir_file_str, bypass_options, logger);
+		solve_operating_point(slv, sparse_system->x, sparse_system->b, output_dir);
 	} else {
 		system = new spic::MNASystem(netlist, node_table.size());
+
 		// Construct a Solver object
 		slv = new spic::Solver(*system, commands.options, logger);
+
+		// Perform any existent transient analyses
+		if (!commands.transient_list.empty()) {
+			commands.transient_dir = output_dir/"transient";
+			commands.perform_transients(*slv, *system, logger);
+		}
+
 		// Solve on the operating point
-		solve_operating_point(slv, system->x, system->b, output_dir, output_dir_str,
-							cir_file, cir_file_str, bypass_options, logger);
+		solve_operating_point(slv, system->x, system->b, output_dir);
 	}
 
 	// Perform any existent dc sweeps
 	if (!disable_dc_sweeps) {
 		commands.dc_sweeps_dir = output_dir/"dc_sweeps";
 		commands.perform_dc_sweeps(slv, logger);
-	}
-
-	// Perform any existent transient analyses
-	if (!commands.transient_list.empty()) {
-		commands.transient_dir = output_dir/"transient";
-		if (commands.options.sparse) {
-			logger.log(WARNING, "Unsupported sparse transient analysis yet");
-		} else {
-			commands.perform_transients(*slv, *system, logger);
-		}
 	}
 
 	// Performance Counters
@@ -202,13 +210,12 @@ void parse_spice_file(std::filesystem::path cir_file, Logger &logger) {
 	std::cout << netlist;
 }
 
-void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorXd &b,
-	const std::filesystem::path &output_dir, const std::string &output_dir_str,
-	const std::filesystem::path &cir_file, const std::string &cir_file_str,
-	bool bypass_options, Logger &logger)
+void create_directory_structure(const std::filesystem::path &output_dir,
+								const std::filesystem::path &cir_file, 
+								bool bypass_options, Logger &logger)
 {
-	// Solve MNA system on the operating point
-	slv->solve(b);
+	const std::string output_dir_str = output_dir.string();
+	const std::string cir_file_str = cir_file.string();
 
 	// Delete output_dir if it exists and then create it again
 	if (std::filesystem::exists(output_dir)) {
@@ -220,7 +227,7 @@ void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorX
 
 	// Copy the circuit file used to the output directory
 	logger.log(INFO, "Copying " + cir_file_str +  " file to " + output_dir_str);
-	
+
 	if (!bypass_options) {
 		std::filesystem::copy(cir_file, output_dir);
 	} else {
@@ -260,6 +267,14 @@ void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorX
 		out_file << user_options << std::endl;
 		out_file.close();
 	}
+}
+
+void solve_operating_point(spic::Solver *slv, Eigen::VectorXd &x, Eigen::VectorXd &b,
+						const std::filesystem::path &output_dir)
+{
+	// Solve MNA system on the operating point
+	slv->analyze();
+	slv->solve(b);
 
 	// Create the dc_op.dat file in the output directory
 	std::ofstream file;

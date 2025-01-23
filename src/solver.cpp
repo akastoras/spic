@@ -481,6 +481,21 @@ namespace spic {
 
 	/* Wrapper functions */
 
+	/* Analyze is called before solve to either create the decomposition for direct methods
+	 * or the preconditioner for iterative methods 
+	 */
+	void Solver::analyze()
+	{
+		if (options.iter) {
+			compute();
+		} else {
+			if (!decompose()) {
+				logger.log(ERROR, "Exiting due to non-SPD MNA system");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+
 	/* Decompose is called before solve for direct methods */
 	bool Solver::decompose()
 	{

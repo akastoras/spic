@@ -1,7 +1,7 @@
-secs_in_decompose:	8.6864e-05
+secs_in_decompose:	0.000299858
 secs_in_compute:	0
-secs_in_solve:	0.00158804
-decompose_calls:	1
+secs_in_solve:	0.00153566
+decompose_calls:	3
 compute_calls:	0
 solve_calls:	102
-total_secs:	0.263092
+total_secs:	0.251887

@@ -97,29 +97,36 @@ namespace spic {
 								std::filesystem::path transient_dir,
 								Logger &logger)
 	{
-		int steps = fin_time / time_step;
+		logger.log(INFO, "Running Transient Analysis for " + std::to_string(fin_time) + " seconds with time step " + std::to_string(time_step) + " seconds.");
 
+		/* Initialize variables */
+
+		int steps = fin_time / time_step;
 		Eigen::VectorXd *curr_source_vector_ptr = new Eigen::VectorXd(tran_mna_system.mna_system.n);
 		curr_source_vector_ptr->setZero();
+
+		/* Create vectors for keeping the output data */
 
 		// Create a set to store unique elements from prints and plots
 		std::set<std::string> unique_elements(prints.begin(), prints.end());
 		unique_elements.insert(plots.begin(), plots.end());
-
-		// Convert the set back to a vector
 		std::vector<std::string> unique_vector(unique_elements.begin(), unique_elements.end());
 
-		// Init vector of vectors
 		std::unordered_map<std::string, std::vector<double>> transient_data;
+		std::vector<double> transient_times;
+
+		// Init vector of vectors
 		for (auto &print_node : unique_vector) {
 			transient_data[print_node] = std::vector<double>();
 		}
-		std::vector<double> transient_times;
+
+		/* Start the Transient Analysis */
 
 		// Find the transient source vector for the initial time which is 0.0
 		calculate_source_vector(*curr_source_vector_ptr, tran_mna_system.mna_system.total_nodes, 0.0);
 
 		// Solve the MNA system for the initial time
+		solver.analyze();
 		solver.solve(*curr_source_vector_ptr);
 
 		Eigen::VectorXd *prev_source_vector_ptr = nullptr;
@@ -127,17 +134,13 @@ namespace spic {
 			prev_source_vector_ptr = new Eigen::VectorXd(*curr_source_vector_ptr);
 		}
 
-		// Create the new transient A matrix
+		// Create the new transient A matrix and analyze it
 		tran_mna_system.create_tran_system(time_step);
+		solver.analyze();
 
 		// Run the transient analysis
 		for (int k = 1; k <= steps; k++) {
 			transient_times.push_back(k * time_step);
-			// if (k <= 3) {
-			// 	std::cout << "Time: " << transient_times[k-1] << std::endl;
-			// 	std::cout << "Source Vector: " << *curr_source_vector_ptr << std::endl;
-			// 	std::cout << "x: " << tran_mna_system.mna_system.x << std::endl;
-			// }
 
 			// Calculate the source vector for the current time
 			calculate_source_vector(*curr_source_vector_ptr, tran_mna_system.mna_system.total_nodes, transient_times[k-1]);
@@ -163,7 +166,7 @@ namespace spic {
 
 		// Dump the Transient Analysis results to files
 		dump_results(transient_data, transient_times, unique_vector, transient_dir);
-		
+
 		// Use gnuplot to plot the Transient Analysis results for the plot nodes
 		plot_results(plots, logger, transient_dir);
 
@@ -209,7 +212,7 @@ namespace spic {
 		std::string fin_str = std::to_string(fin_time);
 		fin_str.erase(fin_str.find_last_not_of('0') + 1, std::string::npos);
 		fin_str.erase(fin_str.find_last_not_of('.') + 1, std::string::npos);
-		
+
 		return "tran_" + step_str + "_" + fin_str + "_V(" + print_node + ").dat";
 	}
 
@@ -222,6 +225,9 @@ namespace spic {
 		std::ofstream file;
 		for (auto &print_node : unique_vector) {
 			file.open(transient_dir/get_transient_name(print_node));
+			if (!file.is_open()) {
+				throw std::runtime_error("Unable to open file for writing: " + (transient_dir/get_transient_name(print_node)).string());
+			}
 			for (int i = 0; i < transient_times.size(); i++) {
 				file << transient_times[i] << " " << transient_data[print_node][i] << std::endl;
 			}

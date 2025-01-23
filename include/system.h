@@ -68,12 +68,21 @@ namespace spic {
 		Eigen::MatrixXd C;
 		Eigen::VectorXd dc_source_vector;
 
+		// Constructor: Copy the A matrix to the G matrix to be kept
+		// calculate the C matrix, A will be used to store the transient system 
 		MNASystemTransient(transient_method_t transient_method, MNASystem &mna_system) :
 			transient_method(transient_method) , G(mna_system.A), C(mna_system.n, mna_system.n), mna_system(mna_system), dc_source_vector(mna_system.b)
 		{
 			C.setZero();
-
 			create_initial_tran_system();
+		}
+
+		// Destructor: Copy the G matrix back to the A matrix to be used for DC analysis
+		// also copy the dc_source_vector back to the b vector
+		~MNASystemTransient()
+		{
+			mna_system.A = G;
+			mna_system.b = dc_source_vector;
 		}
 
 		void create_initial_tran_system();
