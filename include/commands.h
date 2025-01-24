@@ -30,6 +30,7 @@ namespace spic {
 		bool add_i_dc_sweep(std::string &source_name, double start_value, double end_value, double step);
 		void perform_dc_sweeps(Solver *solver, Logger &logger);
 		void perform_transients(Solver &solver, MNASystem &mna_system, Logger &logger);
+		void perform_transients(Solver &solver, MNASparseSystem &mna_sp_system, Logger &logger);
 	};
 }
 std::ostream& operator<<(std::ostream &out, const spic::Commands &commands);

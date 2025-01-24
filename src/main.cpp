@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 		// Perform any existent transient analyses
 		if (!commands.transient_list.empty()) {
 			commands.transient_dir = output_dir/"transient";
-			logger.log(WARNING, "Unsupported sparse transient analysis yet");
+			commands.perform_transients(*slv, *sparse_system, logger);
 		}
 
 		// Solve on the operating point

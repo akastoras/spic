@@ -96,18 +96,32 @@ namespace spic {
 		double time_step;
 		double fin_time;
 
+		union {
+			MNASystemTransient *tran_mna_system;
+			MNASparseSystemTransient *tran_mna_sparse_system;
+		};
+
 		TransientAnalysis(double time_step, double fin_time) :
-			time_step(time_step), fin_time(fin_time) {}
+			time_step(time_step), fin_time(fin_time)
+		{
+			tran_mna_system = NULL;
+		}
 
 		~TransientAnalysis() {}
 
+		void load_system(MNASystemTransient *system);
+		void load_system(MNASparseSystemTransient *system);
+
+		Eigen::VectorXd &solve_curr_step(Solver &solver,
+										Eigen::VectorXd **curr_source_vector_ptr,
+										Eigen::VectorXd **prev_source_vector_ptr);
+
 		void run(Solver &solver,
-				MNASystemTransient &tran_mna_system,
 				std::vector<std::string> &prints,
 				std::vector<std::string> &plots,
 				std::filesystem::path transient_dir,
 				Logger &logger);
-		
+
 		private:
 		void calculate_source_vector(Eigen::VectorXd &source_vector, int total_nodes, double time);
 		std::string get_transient_name(std::string print_node);

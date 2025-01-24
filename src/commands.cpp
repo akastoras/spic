@@ -35,13 +35,13 @@ namespace spic {
 
 	// Commands::perform_dc_sweeps function performs all the DC Sweeps
 	void Commands::perform_dc_sweeps(Solver *solver, Logger &logger) {
-		// Delete dc_sweeps_dir if it exists and then create it again
-		if (std::filesystem::exists(dc_sweeps_dir)) {
-			logger.log(WARNING, std::string(dc_sweeps_dir) + " exists... removing it");
-			std::filesystem::remove_all(dc_sweeps_dir);
-		}
+		logger.log(INFO, "Performing DC Sweeps");
+		
+		// Create it the dc_sweeps_dir
 		logger.log(INFO, "Creating " + std::string(dc_sweeps_dir));
-		std::filesystem::create_directories(dc_sweeps_dir);
+		if (!std::filesystem::create_directories(dc_sweeps_dir)) {
+			logger.log(ERROR, "Unable to create " + std::string(dc_sweeps_dir));
+		}
 
 		// Perform the DC Voltage Sweeps
 		for (auto &s : v_dc_sweeps) {
@@ -58,11 +58,6 @@ namespace spic {
 	{
 		logger.log(INFO, "Performing Transient Analysises");
 
-		// Delete transient_dir if it exists and then create it again
-		if (std::filesystem::exists(transient_dir)) {
-			logger.log(WARNING, std::string(transient_dir) + " exists... removing it");
-			std::filesystem::remove_all(transient_dir);
-		}
 		logger.log(INFO, "Creating " + std::string(transient_dir));
 		if (!std::filesystem::create_directories(transient_dir)) {
 			logger.log(ERROR, "Unable to create " + std::string(transient_dir));
@@ -72,7 +67,28 @@ namespace spic {
 
 		// Perform the Transient Analysises
 		for (auto &t : transient_list) {
-			t.run(solver, tran_mna_system, print_nodes, plot_nodes, transient_dir, logger);
+			t.load_system(&tran_mna_system);
+			t.run(solver, print_nodes, plot_nodes, transient_dir, logger);
+		}
+	}
+
+	// Commands::perform_dc_sweeps function performs all the Transient Analysises
+	void Commands::perform_transients(Solver &solver, MNASparseSystem &mna_sparse_system, Logger &logger)
+	{
+		logger.log(INFO, "Performing Transient Analysises");
+
+		// Create empty directory to store the transient analysis results
+		logger.log(INFO, "Creating " + std::string(transient_dir));
+		if (!std::filesystem::create_directories(transient_dir)) {
+			logger.log(ERROR, "Unable to create " + std::string(transient_dir));
+		}
+
+		MNASparseSystemTransient tran_mna_sparse_system(commands.options.transient_method, mna_sparse_system);
+
+		// Perform the Transient Analysises
+		for (auto &t : transient_list) {
+			t.load_system(&tran_mna_sparse_system);
+			t.run(solver, print_nodes, plot_nodes, transient_dir, logger);
 		}
 	}
 }

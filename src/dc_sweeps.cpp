@@ -147,7 +147,10 @@ namespace spic {
 			std::string plot_file = dc_sweeps_dir/get_dc_sweep_name(plot_node);
 			std::string image_file = plot_file;
 			image_file.erase(plot_file.find(".dat"), std::string::npos);
-			std::string plot_command = "gnuplot -e \"set terminal png; set output '" + image_file + ".png'; plot '" + plot_file + "' with lines title 'V(" + plot_node + ") vs " + source_name + "\"";
+			std::string plot_command = "gnuplot -e \"set terminal png; set output '"
+										+ image_file + ".png'; plot '" 
+										+ plot_file 
+										+ "' with lines title 'V(" + plot_node + ") vs " + source_name + "\"";
 			logger.log(INFO, plot_command);
 			std::system(plot_command.c_str());
 		}

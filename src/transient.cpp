@@ -46,7 +46,8 @@ namespace spic {
 		if (t <= sin.td) {
 			return sin.i1 + sin.ia * std::sin(sin.initial_phase);
 		} else {
-			return sin.i1 + sin.ia * std::sin(sin.omega * (t - sin.td) + sin.initial_phase) * std::exp(-(t - sin.td) * sin.df);
+			return sin.i1
+				+ sin.ia * std::sin(sin.omega * (t - sin.td) + sin.initial_phase) * std::exp(-(t - sin.td) * sin.df);
 		}
 	}
 
@@ -89,20 +90,33 @@ namespace spic {
 	/*              Routines for TransientAnalysis class              */
 	/******************************************************************/
 
+	void TransientAnalysis::load_system(MNASystemTransient *system)
+	{
+		tran_mna_system = system;
+	}
+	
+	void TransientAnalysis::load_system(MNASparseSystemTransient *system)
+	{
+		tran_mna_sparse_system = system;
+	}
+
 	/* Main routine for executing a Transient Analysis */
 	void TransientAnalysis::run(Solver &solver,
-								MNASystemTransient &tran_mna_system,
 								std::vector<std::string> &prints,
 								std::vector<std::string> &plots,
 								std::filesystem::path transient_dir,
 								Logger &logger)
 	{
-		logger.log(INFO, "Running Transient Analysis for " + std::to_string(fin_time) + " seconds with time step " + std::to_string(time_step) + " seconds.");
+		logger.log(INFO, "Running Transient Analysis for "
+							+ std::to_string(fin_time) + " seconds with time step "
+							+ std::to_string(time_step) + " seconds.");
 
 		/* Initialize variables */
 
 		int steps = fin_time / time_step;
-		Eigen::VectorXd *curr_source_vector_ptr = new Eigen::VectorXd(tran_mna_system.mna_system.n);
+		options_t &ops = commands.options;
+		int n = (ops.sparse) ? tran_mna_sparse_system->mna_sparse_system.n : tran_mna_system->mna_system.n;
+		Eigen::VectorXd *curr_source_vector_ptr = new Eigen::VectorXd(n);
 		curr_source_vector_ptr->setZero();
 
 		/* Create vectors for keeping the output data */
@@ -123,19 +137,25 @@ namespace spic {
 		/* Start the Transient Analysis */
 
 		// Find the transient source vector for the initial time which is 0.0
-		calculate_source_vector(*curr_source_vector_ptr, tran_mna_system.mna_system.total_nodes, 0.0);
+		int total_nodes = (ops.sparse) ? tran_mna_sparse_system->mna_sparse_system.total_nodes :
+								 	 	 tran_mna_system->mna_system.total_nodes;
+		calculate_source_vector(*curr_source_vector_ptr, total_nodes, 0.0);
 
 		// Solve the MNA system for the initial time
 		solver.analyze();
 		solver.solve(*curr_source_vector_ptr);
 
 		Eigen::VectorXd *prev_source_vector_ptr = nullptr;
-		if (commands.options.transient_method == TR) {
+		if (ops.transient_method == TR) {
 			prev_source_vector_ptr = new Eigen::VectorXd(*curr_source_vector_ptr);
 		}
 
 		// Create the new transient A matrix and analyze it
-		tran_mna_system.create_tran_system(time_step);
+		if (ops.sparse) {
+			tran_mna_sparse_system->create_tran_system(time_step);
+		} else {
+			tran_mna_system->create_tran_system(time_step);
+		}
 		solver.analyze();
 
 		// Run the transient analysis
@@ -143,24 +163,16 @@ namespace spic {
 			transient_times.push_back(k * time_step);
 
 			// Calculate the source vector for the current time
-			calculate_source_vector(*curr_source_vector_ptr, tran_mna_system.mna_system.total_nodes, transient_times[k-1]);
+			calculate_source_vector(*curr_source_vector_ptr, total_nodes, transient_times[k-1]);
 
-
-			// Update the system's b vector
-			if (commands.options.transient_method == BE) {
-				tran_mna_system.update_tran_system_be(*curr_source_vector_ptr, time_step);
-			} else {
-				tran_mna_system.update_tran_system_tr(*curr_source_vector_ptr, *prev_source_vector_ptr, time_step);
-				std::swap<Eigen::VectorXd*>(curr_source_vector_ptr, prev_source_vector_ptr);
-			}
-
-			// Solve the system
-			solver.solve(tran_mna_system.mna_system.b);
+			Eigen::VectorXd &solution = solve_curr_step(solver,
+														&curr_source_vector_ptr,
+														&prev_source_vector_ptr);
 
 			// Store the results for the print nodes
 			for (auto &print_node : unique_vector) {
 				int node_id = node_table.find_node(&print_node) - 1;
-				transient_data[print_node].push_back(tran_mna_system.mna_system.x(node_id));
+				transient_data[print_node].push_back(solution(node_id));
 			}
 		}
 
@@ -172,6 +184,41 @@ namespace spic {
 
 		delete prev_source_vector_ptr;
 		delete curr_source_vector_ptr;
+	}
+
+	Eigen::VectorXd &TransientAnalysis::solve_curr_step(Solver &solver,
+														Eigen::VectorXd **curr_source_vector_ptr,
+														Eigen::VectorXd **prev_source_vector_ptr)
+	{
+		// Update the system's b vector
+		if (commands.options.sparse) { // Sparse
+			if (commands.options.transient_method == BE) {
+				tran_mna_sparse_system->update_tran_system_be(**curr_source_vector_ptr, time_step);
+			} else {
+				tran_mna_sparse_system->update_tran_system_tr(**curr_source_vector_ptr,
+															  **prev_source_vector_ptr,
+															  time_step);
+				std::swap<Eigen::VectorXd*>(*curr_source_vector_ptr, *prev_source_vector_ptr);
+			}
+
+			// Solve the sparse system
+			solver.solve(tran_mna_sparse_system->mna_sparse_system.b);
+
+			return tran_mna_sparse_system->mna_sparse_system.x;
+		} else { // Dense
+			if (commands.options.transient_method == BE) {
+				tran_mna_system->update_tran_system_be(**curr_source_vector_ptr, time_step);
+			} else {
+				tran_mna_system->update_tran_system_tr(**curr_source_vector_ptr,
+													   **prev_source_vector_ptr, time_step);
+				std::swap<Eigen::VectorXd*>(*curr_source_vector_ptr, *prev_source_vector_ptr);
+			}
+
+			// Solve the system
+			solver.solve(tran_mna_system->mna_system.b);
+
+			return tran_mna_system->mna_system.x;
+		}
 	}
 
 	/* Calculate the source vector for the current time */
@@ -226,7 +273,8 @@ namespace spic {
 		for (auto &print_node : unique_vector) {
 			file.open(transient_dir/get_transient_name(print_node));
 			if (!file.is_open()) {
-				throw std::runtime_error("Unable to open file for writing: " + (transient_dir/get_transient_name(print_node)).string());
+				throw std::runtime_error("Unable to open file for writing: "
+											+ (transient_dir/get_transient_name(print_node)).string());
 			}
 			for (int i = 0; i < transient_times.size(); i++) {
 				file << transient_times[i] << " " << transient_data[print_node][i] << std::endl;
@@ -244,7 +292,10 @@ namespace spic {
 			std::string plot_file = transient_dir/get_transient_name(plot_node);
 			std::string image_file = plot_file;
 			image_file.erase(plot_file.find(".dat"), std::string::npos);
-			std::string plot_command = "gnuplot -e \"set terminal png; set output '" + image_file + ".png'; plot '" + plot_file + "' with lines title 'V(" + plot_node + ") vs time\"";
+			std::string plot_command = "gnuplot -e \"set terminal png; set output '"
+									 + image_file + ".png'; plot '"
+									 + plot_file + "' with lines title 'V("
+									 + plot_node + ") vs time\"";
 			logger.log(INFO, plot_command);
 			std::system(plot_command.c_str());
 		}
