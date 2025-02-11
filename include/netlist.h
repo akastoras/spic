@@ -46,7 +46,6 @@ namespace spic {
 			Element2nodes(str, node1, node2, val), transient_specs(transient_specs) { }
 
 		double eval(double t);
-
 	};
 
 	class VoltageSource : public Source {

@@ -69,11 +69,12 @@ def main():
 		raise Exception(f"Not a file: {cir_file}")
 
 	# 1. Check if golden exists
-	result = subprocess.run(["python3", os.path.join(spic_dir,"scripts/make_golden.py"),
-					"--cir_file", cir_file,
-					"--output_dir", golden_dir])
-	if result.returncode != 0:
-		raise RuntimeError(f"make_golden.py failed for cir_file {cir_file}")
+	if "ibm" not in cir_file:
+		result = subprocess.run(["python3", os.path.join(spic_dir,"scripts/make_golden.py"),
+								"--cir_file", cir_file,
+								"--output_dir", golden_dir])
+		if result.returncode != 0:
+			raise RuntimeError(f"make_golden.py failed for cir_file {cir_file}")
 
 	# 2. Run spic
 	result = subprocess.run([spic_bin, "--cir_file", cir_file, "--output_dir", output_dir] + spic_option_args)

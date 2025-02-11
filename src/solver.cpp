@@ -9,6 +9,7 @@
 #include <Eigen/SparseCholesky>
 
 #include "system.h"
+#include "sparse_system.h"
 #include "commands.h"
 #include "util.h"
 #include "solver.h"

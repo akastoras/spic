@@ -1,27 +1,21 @@
-* Circuit 1
-V1 n5 0 2 SIN (1e-3 0.5 5 1 1 30)
-*EXP (2 5 1 0.2 2 0.5)
-V2 n3 n2 0.2
-*PULSE (0.2 1 1 0.1 0.4 0.5 2)
-V3 n7 n6 2
-R1 n1 n5 1.5
-R2 n1 n12 1
-R3 n5 n2 50
-R4 n5 n6 0.1
-R5 n2 n6 1.5
-R6 n3 n4 0.1
-R7 n7 0 1e3
-R8 n4 0 10
-I1 n4 n7 1e-3 
-I2 0  n6 1e-3
-*PWL (0 1e-3) (1.2 0.1) (1.4 1) (2 0.2) (3 0.4)
-C1 n7 0 0.1
-C2 n2 0 0.2
-L1 n12 n2 0.1
+* Hello World
+V1 5 0 2   EXP (2 5 1 0.2 2 0.5)
+V2 3 2 0.2 PULSE (0.2 1 1 0.1 0.4 0.5 2)
+V3 7 6 2
+R1 1 5 1.5
+R2 1 12 1
+R3 5 2 50
+R4 5 6 0.1
+R5 2 6 1.5
+R6 3 4 0.1
+R7 7 0 1e3
+R8 4 0 10
+I1 4 7 1e-3 SIN (1e-3 0.5 5 1 1 30)
+I2 0 6 1e-3 PWL (0 1e-3) (1.2 0.1) (1.4 1) (2 0.2) (3 0.4)
+C1 7 0 0.1
+C2 2 0 0.2
+L1 12 2 0.1
 
-.TRAN 0.02 2
-.PLOT V(n1) V(n4) V(n5) V(n2) V(n6) V(n7) V(n3)
-.OPTIONS METHOD=TR
-* .OPTIONS ITER ITOL=0.000000
-
-* n5 n3 n2 n7 n6 n1 n12 n4
+.OPTIONS METHOD=BE CUSTOM
+.TRAN 0.01 3
+.PLOT V(1) V(4) V(5)

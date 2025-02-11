@@ -76,6 +76,8 @@
 %token T_METHOD_BE 	"Backward Euler Method"
 %token T_METHOD_TR	"Trapezoidal Rule Method"
 %token T_TRAN		".TRAN"
+%token T_COMMA		"comma"
+
 
 %token	<intval>	T_INTEGER	"Integer Number"
 %token	<floatval>	T_FLOAT		"Floating Point Number"
@@ -130,11 +132,20 @@ m: T_M node node node node T_NAME T_LENGTH value T_WIDTH value { $$ = new spic::
 q: T_Q node node node T_NAME T_AREA value { $$ = new spic::BJT($1, $2, $3, $4, $5, $7);  delete $1; delete $5; }
  | T_Q node node node T_NAME              { $$ = new spic::BJT($1, $2, $3, $4, $5, 1.0); delete $1; delete $5; }
 
-tran_spec: T_EXP T_LPAR value value pos_value pos_value pos_value pos_value T_RPAR            { $$ = new spic::TransientSpecs(spic::TransientSpecs::EXP, $3, $4, $5, $6, $7, $8); }
-		| T_SIN T_LPAR value value pos_value pos_value pos_value value T_RPAR                 { $$ = new spic::TransientSpecs(spic::TransientSpecs::SIN, $3, $4, $5, $6, $7, $8); }
-		| T_PULSE T_LPAR value value pos_value pos_value pos_value pos_value pos_value T_RPAR { $$ = new spic::TransientSpecs(spic::TransientSpecs::PULSE, $3, $4, $5, $6, $7, $8, $9); }
-		| T_PWL pwl_pairs                                                                     { $$ = new spic::TransientSpecs(spic::TransientSpecs::PWL, $2); }
-		| /* empty */                                                                         { $$ = NULL; }
+tran_spec: T_EXP T_LPAR value value pos_value pos_value pos_value pos_value T_RPAR
+													{ $$ = new spic::TransientSpecs(spic::TransientSpecs::EXP, $3, $4, $5, $6, $7, $8); }
+		| T_EXP T_LPAR value T_COMMA value T_COMMA pos_value T_COMMA pos_value T_COMMA pos_value  T_COMMA pos_value T_RPAR 
+													{ $$ = new spic::TransientSpecs(spic::TransientSpecs::EXP, $3, $5, $7, $9, $11, $13); }
+		| T_SIN T_LPAR value value pos_value pos_value pos_value value T_RPAR
+													{ $$ = new spic::TransientSpecs(spic::TransientSpecs::SIN, $3, $4, $5, $6, $7, $8); }
+		| T_SIN T_LPAR value T_COMMA value T_COMMA pos_value T_COMMA pos_value T_COMMA pos_value T_COMMA value T_RPAR
+													{ $$ = new spic::TransientSpecs(spic::TransientSpecs::SIN, $3, $5, $7, $9, $11, $13); }
+		| T_PULSE T_LPAR value value pos_value pos_value pos_value pos_value pos_value T_RPAR
+													{ $$ = new spic::TransientSpecs(spic::TransientSpecs::PULSE, $3, $4, $5, $6, $7, $8, $9); }
+		| T_PULSE T_LPAR value T_COMMA value T_COMMA pos_value T_COMMA pos_value T_COMMA pos_value T_COMMA pos_value T_COMMA pos_value T_RPAR
+													{ $$ = new spic::TransientSpecs(spic::TransientSpecs::PULSE, $3, $5, $7, $9, $11, $13, $15); }
+		| T_PWL pwl_pairs							{ $$ = new spic::TransientSpecs(spic::TransientSpecs::PWL, $2); }
+		| /* empty */								{ $$ = NULL; }
  
 pwl_pairs: pwl_pairs T_LPAR pos_value value T_RPAR { $$ = $1; $$->push_back(std::pair<float, float>($3, $4)); }
 	| /*Empty*/ { $$ = new std::vector<std::pair<float, float>>(); }

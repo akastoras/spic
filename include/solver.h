@@ -10,6 +10,7 @@
 #include <Eigen/SparseCholesky>
 
 #include "system.h"
+#include "sparse_system.h"
 #include "util.h"
 
 #define EPS 1e-23

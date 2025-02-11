@@ -16,6 +16,7 @@
 #include "node_table.h"
 #include "netlist.h"
 #include "system.h"
+#include "sparse_system.h"
 #include "util.h"
 #include "solver.h"
 
@@ -129,7 +130,7 @@ int main(int argc, char** argv)
 	}
 
 	// Perform any existent dc sweeps
-	if (!disable_dc_sweeps) {
+	if (!disable_dc_sweeps && !(commands.v_dc_sweeps.empty() && commands.i_dc_sweeps.empty())) {
 		commands.dc_sweeps_dir = output_dir/"dc_sweeps";
 		commands.perform_dc_sweeps(slv, logger);
 	}

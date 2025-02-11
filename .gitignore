@@ -25,5 +25,7 @@ tests/ibm/golden/
 tests/course/*.cir
 tests/course/output/
 tests/course/golden/
+tests/ibm_transient/*.cir
+tests/ibm_transient/*.solution
 
 *.solution

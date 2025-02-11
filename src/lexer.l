@@ -74,6 +74,8 @@ FLOAT		{FLOAT1}|{FLOAT2}
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 {NAME}				{ yylval.strval = new std::string(yytext); TOUPPER(yylval.strval); return print_token(T_NAME); }
 
+","					{ return print_token(T_COMMA); }
+
 .					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
 }
 
@@ -128,7 +130,7 @@ FLOAT		{FLOAT1}|{FLOAT2}
 {FLOAT}				{ yylval.floatval = atof(yytext); return print_token(T_FLOAT); }
 {INTEGER}			{ yylval.intval = atoi(yytext); return print_token(T_INTEGER); }
 
-.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character"); }
+.					{ std::cout << "\"" << yytext << "\"" << "\n"; yyerror("Unknown Character in Transient"); }
 }
 
 <END>{
@@ -259,6 +261,8 @@ int print_token(int token)
 		std::cout << "Found Trapezoidal Method\n";
 	} else if (token == T_METHOD_BE) {
 		std::cout << "Found Backward Euler Method\n";
+	} else if (token == T_COMMA) {
+		std::cout << "Found Comma\n";
 	} else {
 		yyerror("Unknown token\n");
 		exit(1);

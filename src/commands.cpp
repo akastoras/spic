@@ -10,6 +10,7 @@
 #include "netlist.h"
 #include "node_table.h"
 #include "system.h"
+#include "sparse_system.h"
 #include "util.h"
 
 namespace spic {

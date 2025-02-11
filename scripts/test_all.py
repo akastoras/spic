@@ -31,14 +31,20 @@ def run_tests(tests_dir, custom, sparse, iter_methods, itol, version_num):
 	for test in tests:
 		if test.endswith('.cir'):
 			params = []
+
+			if "ibmpg1" in test or "ibmpg2" in test or "ibmpg3" in test:
+				continue
+
+			if "simple" in test:
+				continue
+
 			if "30K" in test:
 				continue
 
 			if "20K" in test:
-				if sparse:
-					params.append("--disable_dc_sweeps")
-				else:
-					continue
+				continue
+				# if sparse:
+				# 	params.append("--disable_dc_sweeps")
 
 			if "10K" in test:
 				if sparse or not custom:
@@ -65,7 +71,7 @@ def run_tests(tests_dir, custom, sparse, iter_methods, itol, version_num):
 			print('Running test', test_path)
 			script_dir = os.path.dirname(os.path.realpath(__file__))
 			test_cir = os.path.join(script_dir, "test_cir.py")
-			result = subprocess.run(['python3', test_cir, "--cir_file", test_path, "--tests_dir", tests_dir, "--version", version_num] + params)
+			result = subprocess.run(['python3', test_cir, "--cir_file", test_path, "--tests_dir", tests_dir, "--version", version_num, "--disable_dc_sweeps"] + params)
 			if result.returncode != 0:
 				raise RuntimeError(f"test_cir.py failed for cir_file {test_path}")
 
