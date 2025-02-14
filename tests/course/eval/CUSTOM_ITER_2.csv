@@ -1,0 +1,3 @@
+Test,DC OP Max error,DC OP Average error,DC Sweeps Max error,DC Sweeps Average error
+part3_SPD_10K_nodes.csv,0.0005300396766659999,4.917412935197228e-06,0,0
+part3_LU_10K_nodes.csv,4.694920759532949e-06,6.857932022831032e-08,0,0

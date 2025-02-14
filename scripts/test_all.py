@@ -32,28 +32,7 @@ def run_tests(tests_dir, custom, sparse, iter_methods, itol, version_num):
 		if test.endswith('.cir'):
 			params = []
 
-			if "ibmpg1" in test or "ibmpg2" in test or "ibmpg3" in test:
-				continue
-
-			if "simple" in test:
-				continue
-
-			if "30K" in test:
-				continue
-
-			if "20K" in test:
-				continue
-				# if sparse:
-				# 	params.append("--disable_dc_sweeps")
-
-			if "10K" in test:
-				if sparse or not custom:
-					params.append("--disable_dc_sweeps")
-				else:
-					continue
-
-			if "5K" in test:
-				params.append("--disable_dc_sweeps")
+			params.append("--disable_dc_sweeps")
 
 			if "SPD" in test:
 				params.append("--spd")
